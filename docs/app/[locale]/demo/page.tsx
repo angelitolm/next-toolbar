@@ -1,4 +1,4 @@
-import { ArrowRight2, CloseCircle, Danger, Hashtag, InfoCircle, Monitor, Mouse, PlayCircle, type Icon } from 'iconsax-reactjs'
+import { ArrowRight2, CloseCircle, Danger, Hashtag, InfoCircle, Monitor, Mouse, PlayCircle, ShieldCross, type Icon } from 'iconsax-reactjs'
 import { hasLocale } from 'next-intl'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
@@ -9,11 +9,12 @@ import type { ScenarioId } from '@/lib/demo-scenarios'
 
 type Props = { params: Promise<{ locale: string }> }
 
-const IDS: ScenarioId[] = ['home', 'blog', 'dashboard', 'account', 'checkout', 'notFound', 'settings']
+const IDS: ScenarioId[] = ['home', 'blog', 'dashboard', 'account', 'checkout', 'notFound', 'settings', 'outdated']
 const TRY: [string, Icon][] = [
   ['hover', Mouse],
   ['profiler', Hashtag],
   ['errors', Danger],
+  ['security', ShieldCross],
   ['minimize', CloseCircle],
   ['theme', Monitor],
 ]

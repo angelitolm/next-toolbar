@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname } from 'next/navigation'
-import { type LoggedError, type Visit, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
-import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, Hashtag, Monitor, Moon, Routing2, Sun1, Timer1 } from './icons'
+import { type Advisory, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
+import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Hashtag, Monitor, Moon, Refresh2, Routing2, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { CachePill, CacheSummary, Profiler } from './Profiler'
 import { css } from './styles'
@@ -23,18 +23,24 @@ export type Theme = 'system' | 'light' | 'dark'
 export type NextToolbarProps = {
   /** Initial theme. The toolbar's theme button overrides it and remembers the choice per browser. */
   theme?: Theme
+  /**
+   * Check the installed Next.js version against GitHub's security advisories (default true).
+   * The browser downloads the advisory lists from api.github.com (your version is only sent in the
+   * query to GitHub's advisory database) and caches the result for 6 hours.
+   */
+  securityCheck?: boolean
 }
 const MAX_INSIGHTS = 100
 // Inlined by Next's bundler (define-env) for every module, packages included.
 const BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH || ''
 
-export function NextToolbar({ theme = 'system' }: NextToolbarProps = {}) {
+export function NextToolbar({ theme = 'system', securityCheck = true }: NextToolbarProps = {}) {
   // Dead code in production builds: the bundler inlines NODE_ENV.
   if (process.env.NODE_ENV !== 'development') return null
-  return <Toolbar defaultTheme={theme} />
+  return <Toolbar defaultTheme={theme} securityCheck={securityCheck} />
 }
 
-function Toolbar({ defaultTheme }: { defaultTheme: Theme }) {
+function Toolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securityCheck: boolean }) {
   const pathname = usePathname()
   const params = useParams()
   const timings = useTimings()
@@ -43,11 +49,13 @@ function Toolbar({ defaultTheme }: { defaultTheme: Theme }) {
   const nextVersion = typeof window !== 'undefined' ? window.next?.version : undefined
   const timing = timings[pathname]
   const [visits, setVisits] = useVisits(pathname, routePattern(pathname, params), timing)
+  const [security, refreshSecurity] = useSecurity(nextVersion, securityCheck)
 
   return (
     <ToolbarView
       defaultTheme={defaultTheme}
-      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log }}
+      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security }}
+      onRefreshSecurity={refreshSecurity}
       onClear={(keepId) => {
         clear(keepId)
         setErrors([])
@@ -72,12 +80,22 @@ export type ToolbarData = {
   /** Browser-side history, used by the profiler when request insights aren't available. */
   visits: Visit[]
   errorLog: LoggedError[]
+  /** Known vulnerabilities of the installed Next.js version. */
+  security: SecurityState
 }
 
-type ViewProps = { data: ToolbarData; defaultTheme: Theme; onClear: (keepId?: string) => void }
+export type SecurityState = {
+  status: 'off' | 'loading' | 'ok' | 'error'
+  advisories: Advisory[]
+  checkedAt?: number
+  /** One of the two sources failed: the list may be incomplete. */
+  partial?: boolean
+}
 
-export function ToolbarView({ data, defaultTheme, onClear }: ViewProps) {
-  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog } = data
+type ViewProps = { data: ToolbarData; defaultTheme: Theme; onClear: (keepId?: string) => void; onRefreshSecurity?: () => void }
+
+export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity }: ViewProps) {
+  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security } = data
   const root = useShadowRoot()
   const [collapsed, setCollapsed] = useState(false)
   const [profiler, setProfiler] = useState<{ open: boolean; id?: string }>({ open: false })
@@ -281,6 +299,8 @@ export function ToolbarView({ data, defaultTheme, onClear }: ViewProps) {
           </details>
         ))}
       </Segment>
+
+      {security.status !== 'off' && <SecuritySegment security={security} nextVersion={nextVersion} onRefresh={onRefreshSecurity} />}
 
       <div className="spacer" />
       <div className="sep hide-md" />
@@ -519,4 +539,131 @@ function useVisits(pathname: string, route: string, timing: Timing | undefined) 
     })
   }, [pathname, timing])
   return [visits, setVisits] as const
+}
+
+const ADVISORIES_GLOBAL = (version: string) =>
+  `https://api.github.com/advisories?ecosystem=npm&affects=${encodeURIComponent(`next@${version}`)}&per_page=100`
+const ADVISORIES_REPO = 'https://api.github.com/repos/vercel/next.js/security-advisories?state=published&per_page=100&sort=published&direction=desc'
+const SECURITY_KEY = 'next-toolbar:security'
+const SECURITY_TTL = 6 * 60 * 60 * 1000 // GitHub allows 60 unauthenticated requests per hour per IP
+
+// Known vulnerabilities of the installed Next.js: GitHub's reviewed database (GitHub matches the
+// version) plus Next.js' own recent advisories, which appear days before they're reviewed.
+function useSecurity(version: string | undefined, enabled: boolean) {
+  const [state, setState] = useState<SecurityState>({ status: enabled ? 'loading' : 'off', advisories: [] })
+  const [refresh, setRefresh] = useState(0)
+
+  useEffect(() => {
+    if (!enabled || !version) return
+    if (refresh === 0) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(SECURITY_KEY) ?? 'null')
+        if (cached?.version === version && Date.now() - cached.at < SECURITY_TTL) {
+          setState({ status: 'ok', advisories: cached.advisories, checkedAt: cached.at })
+          return
+        }
+      } catch {}
+    }
+    let cancelled = false
+    setState((s) => ({ ...s, status: 'loading' }))
+    const get = (url: string) =>
+      fetch(url, { headers: { Accept: 'application/vnd.github+json' } }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    Promise.allSettled([get(ADVISORIES_GLOBAL(version)), get(ADVISORIES_REPO)]).then(([global, repo]) => {
+      if (cancelled) return
+      if (global.status === 'rejected' && repo.status === 'rejected') return setState({ status: 'error', advisories: [] })
+      const advisories = mergeAdvisories(
+        global.status === 'fulfilled' ? fromGlobalAdvisories(global.value, version) : [],
+        repo.status === 'fulfilled' ? fromRepoAdvisories(repo.value, version, Date.now()) : [],
+      )
+      const partial = global.status === 'rejected' || repo.status === 'rejected'
+      const at = Date.now()
+      setState({ status: 'ok', advisories, checkedAt: at, partial })
+      if (!partial)
+        try {
+          localStorage.setItem(SECURITY_KEY, JSON.stringify({ version, at, advisories }))
+        } catch {}
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [version, enabled, refresh])
+
+  return [state, () => setRefresh((n) => n + 1)] as const
+}
+
+function SecuritySegment({ security, nextVersion, onRefresh }: { security: SecurityState; nextVersion?: string; onRefresh?: () => void }) {
+  const { status, advisories, checkedAt, partial } = security
+  const serious = advisories.some((a) => a.severity === 'critical' || a.severity === 'high')
+  const tone = advisories.length ? (serious ? 'err' : 'warn') : 'ok'
+  const target = upgradeTarget(advisories)
+
+  const label =
+    status === 'ok' && advisories.length ? (
+      <>
+        <ShieldCross className={`ico ico-${tone}`} />
+        <span className={`count ${tone}`}>{advisories.length}</span>
+        <span className="dim hide-md">vulns</span>
+      </>
+    ) : status === 'ok' ? (
+      <>
+        <ShieldTick className="ico ico-ok" />
+        <span className="dim hide-md">secure</span>
+      </>
+    ) : (
+      <>
+        <ShieldSearch className="ico" />
+        <span className="dim hide-md">{status === 'loading' ? 'checking' : 'security ?'}</span>
+      </>
+    )
+
+  return (
+    <Segment className="security" label={label}>
+      <div className="sec-head">
+        <b>Next.js {nextVersion ?? '?'}</b>
+        <span className="dim">
+          {status === 'loading'
+            ? 'Checking GitHub security advisories…'
+            : status === 'error'
+              ? "Couldn't reach GitHub (offline or rate-limited)."
+              : advisories.length
+                ? `${advisories.length} known ${advisories.length === 1 ? 'vulnerability' : 'vulnerabilities'}`
+                : 'No known vulnerabilities'}
+        </span>
+      </div>
+      {target && (
+        <div className={`upgrade ${tone}`}>
+          <span>
+            Upgrade to <b>{target}</b> to fix {advisories.length === 1 ? 'it' : 'all of them'}
+          </span>
+          <code>npm i next@{target}</code>
+        </div>
+      )}
+      {advisories.map((a) => (
+        <a key={a.id} className="adv-row" href={a.url} target="_blank" rel="noreferrer">
+          <span className={`sev ${a.severity}`}>{a.severity}</span>
+          <span className="adv-main">
+            <span className="adv-title">{a.summary.replace(/^Next\.js:\s*/, '')}</span>
+            <span className="dim">
+              {a.cve ?? a.id}
+              {a.patched && ` · fixed in ${a.patched}`}
+              {!a.reviewed && ' · not yet reviewed by GitHub'}
+            </span>
+          </span>
+          <ExportSquare size={14} className="ico" />
+        </a>
+      ))}
+      <div className="sec-foot">
+        <span className="dim">
+          GitHub Security Advisories{checkedAt ? ` · checked ${new Date(checkedAt).toLocaleTimeString()}` : ''}
+          {partial && ' · one source failed, list may be incomplete'}
+        </span>
+        {onRefresh && status !== 'loading' && (
+          <button className="text-btn" onClick={onRefresh} title="Check again now">
+            <Refresh2 size={14} />
+            Refresh
+          </button>
+        )}
+      </div>
+    </Segment>
+  )
 }

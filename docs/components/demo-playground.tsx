@@ -1,6 +1,6 @@
 'use client'
 import { NextToolbarDemo } from '@angelitolm/next-toolbar'
-import { Card, Chart21, DocumentText, Home2, SearchStatus, Setting2, User, type Icon } from 'iconsax-reactjs'
+import { Card, Chart21, DocumentText, Home2, SearchStatus, Setting2, ShieldCross, User, type Icon } from 'iconsax-reactjs'
 import { useState } from 'react'
 import { SCENARIOS, type ScenarioId } from '@/lib/demo-scenarios'
 
@@ -12,6 +12,7 @@ const ICONS: Record<ScenarioId, Icon> = {
   checkout: Card,
   notFound: SearchStatus,
   settings: Setting2,
+  outdated: ShieldCross,
 }
 
 type Copy = Record<ScenarioId, { title: string; description: string; expect: string }>

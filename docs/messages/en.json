@@ -50,6 +50,10 @@
       "title": "Fetch cache",
       "description": "HIT, HMR, MISS and SKIP, the hit rate and the cache reasons."
     },
+    "security": {
+      "title": "Security",
+      "description": "Known vulnerabilities of your Next.js version, from GitHub's security advisories, and what to upgrade to."
+    },
     "compatibility": {
       "title": "Compatibility",
       "description": "What works on Next.js 15 and 16, and which browsers are supported."
@@ -82,6 +86,7 @@
       "hover": "Hover (or Tab to) any segment of the bar to open its panel.",
       "profiler": "Click the request id (#) to open the profiler: every request, its fetches and a render timeline.",
       "errors": "In the 500 scenario, open the errors panel and click Details.",
+      "security": "In \"Outdated Next.js\", hover the red shield: known vulnerabilities of 16.2.6 and the version to upgrade to.",
       "minimize": "Minimize it with the logo or the close button, then click the circle.",
       "theme": "Switch the theme with the button on the right."
     },
@@ -122,6 +127,11 @@
         "title": "Settings",
         "description": "The page renders fine, then a component throws in the browser.",
         "expect": "Client error with stack"
+      },
+      "outdated": {
+        "title": "Outdated Next.js",
+        "description": "The app runs Next.js 16.2.6, affected by several published advisories.",
+        "expect": "Red shield · upgrade to 16.3.6"
       }
     }
   }

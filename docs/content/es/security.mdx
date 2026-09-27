@@ -1,0 +1,56 @@
+Next.js publica correcciones de seguridad a menudo, a veces para problemas críticos como la ejecución remota de código. NextToolbar compara la versión que usa tu app con los avisos publicados y te dice, en la propia página, si estás expuesto y a qué versión actualizar.
+
+## Qué ves
+
+Un segmento con un escudo en la barra:
+
+| Escudo | Significado |
+|---|---|
+| Verde, **secure** | No hay vulnerabilidades conocidas para tu versión de Next.js. |
+| Rojo con un número | Al menos una vulnerabilidad **crítica** o **alta**. |
+| Ámbar con un número | Solo **medias** o **bajas**. |
+| Gris, **checking** / **security ?** | Comprobando, o no se pudo contactar con GitHub (sin conexión, límite de peticiones). |
+
+Pasa el ratón por encima para ver el detalle:
+
+- la versión a la que **actualizar** para corregir todos los avisos de la lista, con el comando (`npm i next@16.3.6`);
+- cada aviso, del más grave al menos: severidad, título, CVE o id GHSA y la versión que lo corrige. Haz clic en uno para leer el aviso completo en GitHub;
+- cuándo se comprobó, y un botón **Refresh**.
+
+<Callout type="tip">
+  La [demo en vivo](./demo) tiene un escenario "Next.js desactualizado" que muestra el panel para la 16.2.6.
+</Callout>
+
+## De dónde salen los datos
+
+Dos fuentes públicas de GitHub, combinadas:
+
+1. **La base de datos de avisos de GitHub (Advisory Database)**, consultada para `next@<tu versión>`. GitHub revisa cada aviso y hace él mismo la comparación de versiones, así que es la fuente precisa.
+2. **Los avisos de seguridad del repositorio `vercel/next.js`** de los últimos 60 días. Next.js los publica ahí primero; llegan a la base revisada días después. Es justo el momento en que más importa actualizar, así que la barra también los lee y los marca como **not yet reviewed by GitHub** (aún no revisado por GitHub).
+
+Un ejemplo real: la RCE crítica de `ImageResponse` del 22 de septiembre de 2026 (GHSA-vcvr-r3jv-pc5j, afecta a `>=16.2.0 <16.3.6`) existió durante días solo como aviso del repositorio. Usando solo la base revisada, la barra habría dicho "secure".
+
+## Cómo se comparan las versiones
+
+Los avisos del repositorio describen las versiones afectadas como texto libre, escrito a mano: `>= 16.2.0 < 16.3.6`, `< 16.3.3`, `>=13.0.0 < 15.5.15, >= 16.0 < 16.2.3`… NextToolbar entiende las formas habituales (operadores de comparación, varios rangos separados por comas) y:
+
+- **ignora** un rango que no puede leer con fiabilidad (`10.x`, `15.0.0 - 15.4.4`, texto) en lugar de adivinar;
+- considera que un aviso **ya está corregido en tu línea** cuando indica una versión parcheada de tu mayor que ya tienes, aunque un rango escrito de forma imprecisa parezca coincidir. Por ejemplo, `< 16.3.3` en un aviso que también corrige 15.x en la 15.5.24 no marca la 15.5.26.
+
+## Privacidad y límites
+
+- La comprobación se hace **en tu navegador y solo en `next dev`**, como el resto de la barra.
+- Hace dos peticiones a `api.github.com`. Solo la consulta a la Advisory Database contiene tu versión de Next.js; la lista del repositorio es la misma para todos y se filtra en local.
+- El resultado se guarda **6 horas** por versión en `localStorage` (`next-toolbar:security`). GitHub permite 60 peticiones sin autenticar por hora e IP, así que la caché te mantiene muy por debajo.
+- Sin conexión o al alcanzar el límite, el escudo se pone gris; nada más se ve afectado. Si solo responde una de las fuentes, el panel avisa de que la lista puede estar incompleta.
+
+## Desactivarlo
+
+```tsx
+<NextToolbar securityCheck={false} />
+```
+
+## Lo que no hace
+
+- Comprueba **solo Next.js**, no React ni tus otras dependencias. Para eso mantén `npm audit`, Dependabot o Renovate en tu CI.
+- Un aviso puede requerir una funcionalidad o configuración concreta (por ejemplo `next/og` en el runtime de Node.js, o un servidor Windows). La barra lista todos los avisos que afectan a tu versión; lee cada uno para valorar tu exposición real.

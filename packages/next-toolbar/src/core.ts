@@ -154,6 +154,166 @@ export function errorsDuring(visits: Visit[], errors: LoggedError[], visit: Visi
   return errors.filter((e) => e.at >= visit.startTime && e.at < next)
 }
 
+// ── Security advisories ───────────────────────────────────────────────────────
+
+export type Severity = 'critical' | 'high' | 'medium' | 'low'
+
+export type Advisory = {
+  id: string // GHSA id
+  cve?: string
+  severity: Severity
+  summary: string
+  url: string
+  published: string
+  /** First version that fixes it for the installed line, when known. */
+  patched?: string
+  /** false: published by Next.js but not yet reviewed into GitHub's global database. */
+  reviewed: boolean
+}
+
+const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+
+function toSeverity(value: unknown): Severity {
+  return value === 'critical' || value === 'high' || value === 'low' ? value : 'medium' // GitHub also says "moderate"
+}
+
+// "16.3.0-canary.2" -> { nums: [16, 3, 0], pre: 'canary.2' }. Missing parts count as 0.
+function parseSemver(v: string) {
+  const m = /^\s*v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?/.exec(v)
+  if (!m) return undefined
+  return { nums: [Number(m[1]), Number(m[2] ?? 0), Number(m[3] ?? 0)], pre: m[4] }
+}
+
+export function compareVersions(a: string, b: string): number {
+  const x = parseSemver(a)
+  const y = parseSemver(b)
+  if (!x || !y) return 0
+  for (let i = 0; i < 3; i++) if (x.nums[i] !== y.nums[i]) return x.nums[i] - y.nums[i]
+  if (x.pre === y.pre) return 0
+  if (!x.pre) return 1 // a release sorts after its prereleases
+  if (!y.pre) return -1
+  return x.pre < y.pre ? -1 : 1
+}
+
+// Matches a version against a vulnerable range as written in Next.js' repository advisories:
+// ">= 16.2.0 < 16.3.6", "< 16.3.3", "=> 11.1.4 < 12.3.5", ">=13.0.0 < 15.5.15, >= 16.0 < 16.2.3".
+// Commas and "||" separate alternatives. Returns undefined when the range can't be read reliably
+// ("10.x", "15.0.0 - 15.4.4", prose), so the caller can ignore it instead of guessing.
+export function inRange(version: string, range: string): boolean | undefined {
+  const alternatives = range.split(/\|\||,/).map((part) => part.trim()).filter(Boolean)
+  if (!alternatives.length) return undefined
+  let matched = false
+  for (const alt of alternatives) {
+    const tokens = alt.replace(/=>/g, '>=').match(/(>=|<=|>|<|=)?\s*v?\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?/g)
+    if (!tokens || tokens.join('').replace(/\s/g, '') !== alt.replace(/=>/g, '>=').replace(/\s/g, '')) return undefined
+    const ok = tokens.every((token) => {
+      const [, op = '=', ver] = /^(>=|<=|>|<|=)?\s*(.+)$/.exec(token.trim())!
+      const c = compareVersions(version, ver)
+      return op === '>=' ? c >= 0 : op === '<=' ? c <= 0 : op === '>' ? c > 0 : op === '<' ? c < 0 : c === 0
+    })
+    matched ||= ok
+  }
+  return matched
+}
+
+// From a patched list like "15.5.14, 16.1.7", the fix for the installed line: the lowest
+// patched version above `version` in the same major, else the lowest one above it at all.
+export function patchedFor(patched: string | null | undefined, version: string): string | undefined {
+  const above = (patched ?? '')
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => parseSemver(p) && compareVersions(p, version) > 0)
+    .sort(compareVersions)
+  const major = parseSemver(version)?.nums[0]
+  return above.find((p) => parseSemver(p)?.nums[0] === major) ?? above[0]
+}
+
+type GhVulnerability = {
+  package?: { name?: string }
+  vulnerable_version_range?: string
+  first_patched_version?: string | { identifier?: string } | null
+  patched_versions?: string | null
+}
+type GhAdvisory = {
+  ghsa_id: string
+  cve_id?: string | null
+  severity?: string
+  summary?: string
+  html_url: string
+  published_at?: string
+  withdrawn_at?: string | null
+  vulnerabilities?: GhVulnerability[]
+}
+
+const nextEntries = (a: GhAdvisory) => (a.vulnerabilities ?? []).filter((v) => v.package?.name === 'next')
+
+const toAdvisory = (a: GhAdvisory, patched: string | undefined, reviewed: boolean): Advisory => ({
+  id: a.ghsa_id,
+  cve: a.cve_id ?? undefined,
+  severity: toSeverity(a.severity),
+  summary: a.summary ?? a.ghsa_id,
+  url: a.html_url,
+  published: a.published_at ?? '',
+  patched,
+  reviewed,
+})
+
+// GitHub's global database, already filtered by `affects=next@<version>`: GitHub did the matching.
+export function fromGlobalAdvisories(json: unknown, version: string): Advisory[] {
+  if (!Array.isArray(json)) return []
+  return (json as GhAdvisory[])
+    .filter((a) => !a.withdrawn_at)
+    .map((a) => {
+      const patched = nextEntries(a)
+        .filter((v) => inRange(version, v.vulnerable_version_range ?? '') !== false)
+        .map((v) => (typeof v.first_patched_version === 'string' ? v.first_patched_version : v.first_patched_version?.identifier))
+      return toAdvisory(a, patchedFor(patched.filter(Boolean).join(','), version), true)
+    })
+}
+
+// Next.js' own repository advisories: the freshest source (published before GitHub reviews them),
+// but free-text ranges. Only recent ones are used, and only when their range can be read.
+export function fromRepoAdvisories(json: unknown, version: string, now: number, days = 60): Advisory[] {
+  if (!Array.isArray(json)) return []
+  const since = now - days * 86_400_000
+  const out: Advisory[] = []
+  for (const a of json as GhAdvisory[]) {
+    if (a.withdrawn_at || !a.published_at || Date.parse(a.published_at) < since) continue
+    const entries = nextEntries(a)
+    const hits = entries.filter((v) => inRange(version, v.vulnerable_version_range ?? '') === true)
+    // Loosely written ranges ("< 16.3.3" meaning only the 16.x line) can catch other lines. If the
+    // advisory ships a fix for the installed major that is already at or below it, it doesn't apply.
+    const major = parseSemver(version)?.nums[0]
+    const lineFixed = entries
+      .flatMap((v) => (v.patched_versions ?? '').split(','))
+      .map((p) => p.trim())
+      .some((p) => parseSemver(p)?.nums[0] === major && compareVersions(p, version) <= 0)
+    if (hits.length && !lineFixed) out.push(toAdvisory(a, patchedFor(hits.map((v) => v.patched_versions ?? '').join(','), version), false))
+  }
+  return out
+}
+
+// Union by id, preferring the reviewed entry; most severe first, then newest.
+export function mergeAdvisories(...lists: Advisory[][]): Advisory[] {
+  const byId = new Map<string, Advisory>()
+  for (const a of lists.flat()) {
+    const prev = byId.get(a.id)
+    if (!prev || (!prev.reviewed && a.reviewed)) byId.set(a.id, { ...a, patched: a.patched ?? prev?.patched })
+  }
+  return [...byId.values()].sort(
+    (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || b.published.localeCompare(a.published),
+  )
+}
+
+// The version to upgrade to so every known advisory is fixed: the highest of their fixes.
+export function upgradeTarget(advisories: Advisory[]): string | undefined {
+  return advisories
+    .map((a) => a.patched)
+    .filter((p): p is string => !!p)
+    .sort(compareVersions)
+    .at(-1)
+}
+
 export type HmrEvent =
   | { kind: 'manifest'; data: Record<string, boolean> }
   | { kind: 'insights'; list: Insight[] }

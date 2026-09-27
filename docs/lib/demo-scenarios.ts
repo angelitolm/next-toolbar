@@ -1,4 +1,4 @@
-import type { ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
+import type { Advisory, ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
 
 // Fixed clock so server and client render the same data.
 const T0 = Date.UTC(2026, 8, 27, 10, 0, 0)
@@ -114,18 +114,30 @@ const clientError: ClientError = {
     at updateFunctionComponent (react-dom-client.development.js:8431:19)`,
 }
 
-export type ScenarioId = 'home' | 'blog' | 'dashboard' | 'account' | 'checkout' | 'notFound' | 'settings'
+// Real advisories affecting Next.js 16.2.6 (September 2026), trimmed to the fields the toolbar shows.
+const gh = (id: string) => `https://github.com/vercel/next.js/security/advisories/${id}`
+const ADVISORIES_16_2_6: Advisory[] = [
+  { id: 'GHSA-vcvr-r3jv-pc5j', cve: 'CVE-2026-94545', severity: 'critical', summary: 'Remote Code Execution in next/og ImageResponse', url: gh('GHSA-vcvr-r3jv-pc5j'), published: '2026-09-22', patched: '16.3.6', reviewed: false },
+  { id: 'GHSA-2xp9-vwfh-vxw4', severity: 'critical', summary: 'Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used', url: gh('GHSA-2xp9-vwfh-vxw4'), published: '2026-09-08', patched: '16.3.3', reviewed: true },
+  { id: 'GHSA-p293-qw3h-jr36', cve: 'CVE-2026-75604', severity: 'critical', summary: 'Unauthenticated Remote Code Execution on windows-hosted servers', url: gh('GHSA-p293-qw3h-jr36'), published: '2026-09-08', patched: '16.3.3', reviewed: true },
+  { id: 'GHSA-6gpp-xcg3-4w24', cve: 'CVE-2026-64642', severity: 'high', summary: 'Middleware / Proxy bypass in App Router applications', url: gh('GHSA-6gpp-xcg3-4w24'), published: '2026-07-22', patched: '16.2.11', reviewed: true },
+  { id: 'GHSA-89xv-2m56-2m9x', cve: 'CVE-2026-64649', severity: 'high', summary: 'Server-Side Request Forgery in Server Actions on custom servers', url: gh('GHSA-89xv-2m56-2m9x'), published: '2026-07-22', patched: '16.2.11', reviewed: true },
+  { id: 'GHSA-q8wf-6r8g-63ch', cve: 'CVE-2026-64644', severity: 'medium', summary: 'Denial of Service in the Image Optimization API using SVGs', url: gh('GHSA-q8wf-6r8g-63ch'), published: '2026-07-22', patched: '16.2.11', reviewed: true },
+]
+
+export type ScenarioId = 'home' | 'blog' | 'dashboard' | 'account' | 'checkout' | 'notFound' | 'settings' | 'outdated'
 
 export const SCENARIOS: { id: ScenarioId; props: NextToolbarDemoProps }[] = [
-  { id: 'home', props: { pathname: '/', status: 200, timingMs: 26, isStatic: true, insights: ALL } },
+  { id: 'home', props: { pathname: '/', status: 200, timingMs: 26, isStatic: true, insights: ALL, advisories: [] } },
   {
     id: 'blog',
-    props: { pathname: '/blog/hello-world', params: { slug: 'hello-world' }, status: 200, timingMs: 58, via: 'rsc', isStatic: true, insights: ALL },
+    props: { pathname: '/blog/hello-world', params: { slug: 'hello-world' }, status: 200, timingMs: 58, via: 'rsc', isStatic: true, insights: ALL, advisories: [] },
   },
   // Next's dev data says static; the no-store fetch makes the toolbar report Dynamic, like `next build`.
-  { id: 'dashboard', props: { pathname: '/dashboard', status: 200, timingMs: 251, via: 'rsc', isStatic: true, insights: ALL } },
-  { id: 'account', props: { pathname: '/account', status: 200, timingMs: 44, via: 'rsc', isStatic: false, insights: ALL } },
-  { id: 'checkout', props: { pathname: '/checkout', status: 500, timingMs: 3030, isStatic: true, insights: ALL } },
-  { id: 'notFound', props: { pathname: '/pricing/enterprise', status: 404, timingMs: 31, isStatic: true, insights: ALL } },
-  { id: 'settings', props: { pathname: '/settings', status: 200, timingMs: 35, via: 'rsc', isStatic: true, insights: ALL, clientErrors: [clientError] } },
+  { id: 'dashboard', props: { pathname: '/dashboard', status: 200, timingMs: 251, via: 'rsc', isStatic: true, insights: ALL, advisories: [] } },
+  { id: 'account', props: { pathname: '/account', status: 200, timingMs: 44, via: 'rsc', isStatic: false, insights: ALL, advisories: [] } },
+  { id: 'checkout', props: { pathname: '/checkout', status: 500, timingMs: 3030, isStatic: true, insights: ALL, advisories: [] } },
+  { id: 'notFound', props: { pathname: '/pricing/enterprise', status: 404, timingMs: 31, isStatic: true, insights: ALL, advisories: [] } },
+  { id: 'settings', props: { pathname: '/settings', status: 200, timingMs: 35, via: 'rsc', isStatic: true, insights: ALL, clientErrors: [clientError], advisories: [] } },
+  { id: 'outdated', props: { pathname: '/', status: 200, timingMs: 26, isStatic: true, insights: ALL, nextVersion: '16.2.6', advisories: ADVISORIES_16_2_6 } },
 ]

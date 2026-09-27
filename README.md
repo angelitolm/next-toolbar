@@ -17,6 +17,7 @@ NextToolbar puts the answers in one place. While you run `next dev`, it sits at 
 - **Server fetches** with their data-cache outcome (HIT / HMR / MISS / SKIP) and hit rate
 - **Errors** on the client (with stack) and on the server (with the span where it started)
 - **Request profiler**: every request with summary, errors, fetches and a render timeline
+- **Security**: known vulnerabilities of your Next.js version (GitHub advisories) and what to upgrade to
 - Light and dark themes, minimizes to a circle, zero runtime dependencies
 
 Dev only: in production the component renders nothing.

@@ -11,6 +11,7 @@ import {
   MessageQuestion,
   Setting2,
   Activity,
+  ShieldTick,
   TickCircle,
   type Icon,
 } from 'iconsax-reactjs'
@@ -20,7 +21,7 @@ import type { Locale } from '@/i18n/routing'
 // Titles and descriptions live in messages/<locale>.json under `pages.<slug>`.
 export const SECTIONS = [
   { key: 'start', pages: ['index', 'getting-started', 'configuration'] },
-  { key: 'features', pages: ['toolbar', 'profiler', 'render-mode', 'fetch-cache'] },
+  { key: 'features', pages: ['toolbar', 'profiler', 'render-mode', 'fetch-cache', 'security'] },
   { key: 'reference', pages: ['compatibility', 'architecture', 'troubleshooting'] },
   { key: 'project', pages: ['design', 'contributing'] },
 ] as const
@@ -39,6 +40,7 @@ export const ICONS: Record<Slug, Icon> = {
   profiler: Activity,
   'render-mode': Layer,
   'fetch-cache': ArrangeHorizontal,
+  security: ShieldTick,
   compatibility: TickCircle,
   architecture: Hierarchy,
   troubleshooting: MessageQuestion,
@@ -66,6 +68,7 @@ const CONTENT: Record<Locale, Record<Slug, Loader>> = {
     profiler: () => import('@/content/en/profiler.mdx'),
     'render-mode': () => import('@/content/en/render-mode.mdx'),
     'fetch-cache': () => import('@/content/en/fetch-cache.mdx'),
+    security: () => import('@/content/en/security.mdx'),
     compatibility: () => import('@/content/en/compatibility.mdx'),
     architecture: () => import('@/content/en/architecture.mdx'),
     troubleshooting: () => import('@/content/en/troubleshooting.mdx'),
@@ -80,6 +83,7 @@ const CONTENT: Record<Locale, Record<Slug, Loader>> = {
     profiler: () => import('@/content/es/profiler.mdx'),
     'render-mode': () => import('@/content/es/render-mode.mdx'),
     'fetch-cache': () => import('@/content/es/fetch-cache.mdx'),
+    security: () => import('@/content/es/security.mdx'),
     compatibility: () => import('@/content/es/compatibility.mdx'),
     architecture: () => import('@/content/es/architecture.mdx'),
     troubleshooting: () => import('@/content/es/troubleshooting.mdx'),

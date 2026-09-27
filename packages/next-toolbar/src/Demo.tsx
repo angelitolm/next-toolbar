@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Insight } from './core'
+import type { Advisory, Insight } from './core'
 import { ToolbarView, type ClientError, type Theme } from './NextToolbar'
 
 export type NextToolbarDemoProps = {
@@ -18,6 +18,8 @@ export type NextToolbarDemoProps = {
   clientErrors?: ClientError[]
   nextVersion?: string
   theme?: Theme
+  /** Known vulnerabilities to show for `nextVersion`. Omit to hide the security segment (the demo never fetches). */
+  advisories?: Advisory[]
 }
 
 const NONE: never[] = []
@@ -37,6 +39,7 @@ export function NextToolbarDemo({
   clientErrors = NONE,
   nextVersion = '16.3.6',
   theme = 'system',
+  advisories,
 }: NextToolbarDemoProps) {
   // Clear works like the live toolbar: drop everything but the current page's request, and client errors.
   const [cleared, setCleared] = useState<{ keep?: string } | null>(null)
@@ -63,6 +66,7 @@ export function NextToolbarDemo({
         basePath: '',
         visits: NONE,
         errorLog: NONE,
+        security: advisories ? { status: 'ok', advisories, checkedAt: Date.now() } : { status: 'off', advisories: NONE },
       }}
       onClear={(keep) => setCleared({ keep })}
     />

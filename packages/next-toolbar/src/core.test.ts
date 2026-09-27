@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { compareVersions, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -161,4 +161,73 @@ test('errorsDuring attributes client errors to the visit they happened in', () =
   assert.deepEqual(errorsDuring(visits, errors, visits[0]).map((e) => e.message), ['e1'])
   assert.deepEqual(errorsDuring(visits, errors, visits[1]).map((e) => e.message), ['e2', 'e3'])
   assert.deepEqual(errorsDuring(visits, errors, visits[2]).map((e) => e.message), ['e4'])
+})
+
+test('compareVersions orders releases, prereleases and short versions', () => {
+  assert.ok(compareVersions('16.3.6', '16.3.5') > 0)
+  assert.ok(compareVersions('16.3.0-canary.2', '16.3.0') < 0)
+  assert.equal(compareVersions('16.0', '16.0.0'), 0)
+  assert.ok(compareVersions('15.5.26', '16.0.0') < 0)
+})
+
+test('inRange reads the ranges written in Next.js advisories', () => {
+  assert.equal(inRange('16.2.6', '>= 16.2.0 < 16.3.6'), true) // the ImageResponse RCE
+  assert.equal(inRange('16.3.6', '>= 16.2.0 < 16.3.6'), false)
+  assert.equal(inRange('15.5.26', '>= 16.2.0 < 16.3.6'), false)
+  assert.equal(inRange('16.2.6', '< 16.3.3'), true)
+  assert.equal(inRange('16.2.6', ' >= 16.0.0 < 16.2.11'), true)
+  assert.equal(inRange('15.5.20', '>=13.0.0 < 15.5.21'), true)
+  assert.equal(inRange('12.0.0', '=> 11.1.4 < 12.3.5'), true) // "=>" typo in a real advisory
+  assert.equal(inRange('16.1.0', '>=13.0.0 < 15.5.15, >= 16.0 < 16.2.3'), true) // comma = alternatives
+  assert.equal(inRange('15.5.15', '>=13.0.0 < 15.5.15, >= 16.0 < 16.2.3'), false)
+  assert.equal(inRange('12.5.0', '>= v12.2.0 < 15.5.16'), true)
+  assert.equal(inRange('16.1.0', '16.1.0'), true) // bare version = exact
+  // Unreadable: unknown, never a guess
+  assert.equal(inRange('10.2.0', '10.x'), undefined)
+  assert.equal(inRange('15.1.0', '15.0.0 - 15.4.4'), undefined)
+  assert.equal(inRange('15.1.0', '>15.0.4 and <15.2.0'), undefined)
+})
+
+test('patchedFor picks the fix for the installed line', () => {
+  assert.equal(patchedFor('15.5.14, 16.1.7', '16.1.2'), '16.1.7')
+  assert.equal(patchedFor('15.5.14, 16.1.7', '15.4.0'), '15.5.14')
+  assert.equal(patchedFor('16.3.6', '16.2.6'), '16.3.6')
+  assert.equal(patchedFor('16.3.6', '16.3.6'), undefined)
+  assert.equal(patchedFor(null, '16.2.6'), undefined)
+})
+
+const NOW = Date.parse('2026-09-27T12:00:00Z')
+const imageResponse = {
+  ghsa_id: 'GHSA-vcvr-r3jv-pc5j', cve_id: 'CVE-2026-94545', severity: 'critical', summary: 'Remote Code Execution in next/og ImageResponse',
+  html_url: 'https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j', published_at: '2026-09-22T00:00:00Z',
+  vulnerabilities: [{ package: { name: 'next' }, vulnerable_version_range: '>= 16.2.0 < 16.3.6', patched_versions: '16.3.6' }],
+}
+const proxyBypass = {
+  ghsa_id: 'GHSA-6gpp-xcg3-4w24', cve_id: 'CVE-2026-64642', severity: 'high', summary: 'Middleware / Proxy bypass',
+  html_url: 'https://github.com/advisories/GHSA-6gpp-xcg3-4w24', published_at: '2026-07-22T00:00:00Z',
+  vulnerabilities: [{ package: { name: 'next' }, vulnerable_version_range: '>= 16.0.0, < 16.2.11', first_patched_version: '16.2.11' }],
+}
+
+test('advisories: global + fresh repo ones, merged and prioritised', () => {
+  const global = fromGlobalAdvisories([proxyBypass], '16.2.6')
+  assert.deepEqual(global.map((a) => [a.id, a.patched, a.reviewed]), [['GHSA-6gpp-xcg3-4w24', '16.2.11', true]])
+
+  const repo = fromRepoAdvisories([imageResponse, { ...imageResponse, ghsa_id: 'OLD', published_at: '2025-01-01T00:00:00Z' }], '16.2.6', NOW)
+  assert.deepEqual(repo.map((a) => [a.id, a.patched, a.reviewed]), [['GHSA-vcvr-r3jv-pc5j', '16.3.6', false]]) // old one skipped
+  assert.deepEqual(fromRepoAdvisories([imageResponse], '16.3.6', NOW), []) // patched version
+  // Real case: "< 16.3.3" only means the 16.x line; 15.5.26 is past this advisory's 15.x fix (15.5.24).
+  const loose = { ...imageResponse, ghsa_id: 'GHSA-2xp9-vwfh-vxw4', vulnerabilities: [
+    { package: { name: 'next' }, vulnerable_version_range: '>= 10.0.0 < 15.5.24', patched_versions: '15.5.24' },
+    { package: { name: 'next' }, vulnerable_version_range: '< 16.3.3', patched_versions: '16.3.3' },
+  ] }
+  assert.deepEqual(fromRepoAdvisories([loose], '15.5.26', NOW), [])
+  assert.deepEqual(fromRepoAdvisories([loose], '15.5.20', NOW).map((a) => a.patched), ['15.5.24'])
+  assert.deepEqual(fromRepoAdvisories([loose], '16.2.6', NOW).map((a) => a.patched), ['16.3.3'])
+  assert.deepEqual(fromRepoAdvisories([{ ...imageResponse, withdrawn_at: '2026-09-23' }], '16.2.6', NOW), [])
+
+  const merged = mergeAdvisories(global, repo, fromGlobalAdvisories([proxyBypass], '16.2.6'))
+  assert.deepEqual(merged.map((a) => a.id), ['GHSA-vcvr-r3jv-pc5j', 'GHSA-6gpp-xcg3-4w24']) // critical first, deduped
+  assert.equal(upgradeTarget(merged), '16.3.6')
+  assert.equal(upgradeTarget([]), undefined)
+  assert.deepEqual(fromGlobalAdvisories({ message: 'rate limited' }, '16.2.6'), [])
 })

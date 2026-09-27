@@ -1,0 +1,56 @@
+Next.js ships security fixes often, sometimes for critical issues like remote code execution. NextToolbar checks the version your app runs against the published advisories and tells you, on the page, if you're exposed and what to upgrade to.
+
+## What you see
+
+A shield segment in the toolbar:
+
+| Shield | Meaning |
+|---|---|
+| Green, **secure** | No known vulnerabilities for your Next.js version. |
+| Red with a count | At least one **critical** or **high** vulnerability. |
+| Amber with a count | Only **medium** or **low** ones. |
+| Grey, **checking** / **security ?** | Checking, or GitHub couldn't be reached (offline, rate-limited). |
+
+Hover it to open the details:
+
+- the version to **upgrade to** so every listed advisory is fixed, with the command (`npm i next@16.3.6`);
+- each advisory, most severe first: severity, title, CVE or GHSA id and the version that fixes it. Click one to read the full advisory on GitHub;
+- when it was checked, and a **Refresh** button.
+
+<Callout type="tip">
+  The [live demo](./demo) has an "Outdated Next.js" scenario showing the panel for 16.2.6.
+</Callout>
+
+## Where the data comes from
+
+Two public GitHub sources, combined:
+
+1. **GitHub's Advisory Database**, queried for `next@<your version>`. GitHub reviews each advisory and does the version matching itself, so this is the precise source.
+2. **The security advisories of the `vercel/next.js` repository** from the last 60 days. Next.js publishes advisories there first; they reach the reviewed database days later. That's exactly the window in which an upgrade matters most, so the toolbar reads them too and marks them **not yet reviewed by GitHub**.
+
+A real example: the critical `ImageResponse` RCE of September 22, 2026 (GHSA-vcvr-r3jv-pc5j, affects `>=16.2.0 <16.3.6`) only existed as a repository advisory for days. With just the reviewed database, the toolbar would have said "secure".
+
+## How versions are matched
+
+Repository advisories describe affected versions as free text, written by hand: `>= 16.2.0 < 16.3.6`, `< 16.3.3`, `>=13.0.0 < 15.5.15, >= 16.0 < 16.2.3`… NextToolbar reads the common forms (comparison operators, several ranges separated by commas) and:
+
+- **ignores** a range it can't read reliably (`10.x`, `15.0.0 - 15.4.4`, prose) instead of guessing;
+- treats an advisory as **fixed for your line** when it lists a patched version in your major that you already have, even if a loosely written range seems to match. For example, `< 16.3.3` in an advisory that also fixes 15.x in 15.5.24 doesn't flag 15.5.26.
+
+## Privacy and limits
+
+- The check runs **in your browser, only in `next dev`**, like the rest of the toolbar.
+- It makes two requests to `api.github.com`. Only the Advisory Database query contains your Next.js version; the repository list is the same for everyone and is filtered locally.
+- Results are cached for **6 hours** per version in `localStorage` (`next-toolbar:security`). GitHub allows 60 unauthenticated requests per hour per IP, so the cache keeps you well under it.
+- Offline or rate-limited, the shield turns grey; nothing else is affected. If only one source answers, the panel says the list may be incomplete.
+
+## Turning it off
+
+```tsx
+<NextToolbar securityCheck={false} />
+```
+
+## What it doesn't do
+
+- It checks **Next.js only**, not React or your other dependencies. Keep `npm audit`, Dependabot or Renovate in CI for that.
+- An advisory can require a specific feature or setup (for example `next/og` on the Node.js runtime, or a Windows server). The toolbar lists every advisory that affects your version; read each one to judge your real exposure.

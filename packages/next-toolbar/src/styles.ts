@@ -22,6 +22,7 @@ const light = /* css */ `
   --nt-accent: #14b8a6;
   --nt-active-bg: rgba(20, 184, 166, .09);
   --nt-none-dot: #b4b4bc;
+  --nt-scrollbar: rgba(15, 15, 20, .2);
   --nt-shadow: 0 20px 40px -16px rgba(15, 23, 42, .25), 0 6px 14px -6px rgba(15, 23, 42, .12), inset 0 1px 0 #ffffff;
 `
 
@@ -57,6 +58,7 @@ export const css = /* css */ `
   /* The logo always sits on a dark tile: the lime end of the gradient vanishes on white. */
   --nt-mark-bg: linear-gradient(180deg, #38383b 0%, #1f1f21 100%);
   --nt-none-dot: #5a5a60;
+  --nt-scrollbar: rgba(255, 255, 255, .18);
   --nt-shadow: 0 24px 48px -12px rgba(0, 0, 0, .55), 0 8px 16px -8px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .08);
   --nt-radius: 12px;
   --nt-font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -74,11 +76,27 @@ code { font: 12px var(--nt-mono); }
 .dim { color: var(--nt-dim); }
 .ico { flex-shrink: 0; color: var(--nt-dim); }
 .ico-err { color: var(--nt-err); }
+.ico-warn { color: var(--nt-warn); }
+.ico-ok { color: var(--nt-static-fg); }
+.count.warn { background: var(--nt-warn); color: #1a1205; }
 .seg:hover .ico { color: var(--nt-text); }
 .chevron { flex-shrink: 0; align-self: center; color: var(--nt-err); transition: transform .15s; }
 details[open] > summary > .chevron { transform: rotate(90deg); }
 .go { display: inline-flex; align-items: center; gap: 4px; }
 .spacer { flex: 1; }
+
+/* Slim, arrow-less scrollbars for every scrollable area (panels, profiler, stacks).
+   Chromium/Safari use the ::-webkit-scrollbar rules; setting scrollbar-width there would make
+   Chrome ignore them and draw OS arrows, so the standard properties are only for the others. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+::-webkit-scrollbar-track { background: transparent; margin-block: 8px; }
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background-color: var(--nt-scrollbar); border: 3px solid transparent; border-radius: 999px; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--nt-dim); }
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: var(--nt-scrollbar) transparent; }
+}
 
 /* Shared floating surface */
 .bar, .launcher, .panel, .profiler {
@@ -177,6 +195,24 @@ button.error-item { display: flex; align-items: baseline; gap: 10px; }
 .error-item > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 10px; }
 .error-item > summary::-webkit-details-marker { display: none; }
 .error-item pre { margin: 8px 0 2px; padding: 8px 10px; max-height: 200px; overflow: auto; border-radius: 6px; background: var(--nt-raised); font: 11px/1.5 var(--nt-mono); white-space: pre-wrap; word-break: break-word; }
+.security .panel { min-width: 360px; left: auto; right: 0; }
+.sec-head { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px 10px; }
+.upgrade { display: flex; flex-direction: column; gap: 6px; margin: 0 4px 8px; padding: 10px 12px; border-radius: 8px; line-height: 1.4; }
+.upgrade.err { background: var(--nt-err-bg); border: 1px solid var(--nt-err-border); }
+.upgrade.warn { background: var(--nt-warn-bg); }
+.upgrade code { user-select: all; padding: 4px 8px; border-radius: 6px; background: var(--nt-raised); align-self: flex-start; }
+.adv-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 7px; color: inherit; text-decoration: none; line-height: 1.35; }
+.adv-row:hover { background: var(--nt-raised); }
+.adv-row .ico { margin-top: 2px; }
+.adv-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.adv-title { overflow-wrap: anywhere; }
+.adv-main .dim { font-size: 11px; }
+.sev { flex-shrink: 0; min-width: 62px; text-align: center; padding: 2px 6px; border-radius: 5px; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.sev.critical { background: var(--nt-err); color: #fff; }
+.sev.high { background: var(--nt-err-bg); color: var(--nt-err); }
+.sev.medium { background: var(--nt-warn-bg); color: var(--nt-warn); }
+.sev.low { background: var(--nt-raised); color: var(--nt-dim); }
+.sec-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px 4px; margin-top: 4px; border-top: 1px solid var(--nt-border); font-size: 11px; }
 .hint { padding: 7px 10px; color: var(--nt-dim); font-size: 12px; line-height: 1.5; }
 .hint code { color: var(--nt-text); }
 
@@ -248,6 +284,7 @@ td code { word-break: break-all; }
 
 @media (max-width: 640px) {
   .bar { left: 8px; right: 8px; bottom: 8px; overflow-x: auto; scrollbar-width: none; }
+  .bar::-webkit-scrollbar { display: none; }
   .launcher { left: 8px; bottom: 8px; }
   .hide-sm { display: none; }
   .profiler { left: 8px; right: 8px; top: 8px; bottom: 72px; }
