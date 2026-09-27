@@ -56,6 +56,28 @@ Bórralas para volver a los valores por defecto. Si `localStorage` no está disp
 
 No es una opción de la barra, pero vale la pena repetirlo: añade `app/error.tsx` para que un error de render no tumbe el layout raíz, y la barra con él. Consulta [Empezar](./getting-started#4-añade-un-error-boundary).
 
+## Componente de demo
+
+`NextToolbarDemo` dibuja la misma barra a partir de los datos que le pases, en cualquier entorno, producción incluida. Es lo que usa la [demo en vivo](./demo); úsalo para documentación, capturas o presentaciones, no en tu app.
+
+```tsx title="app/showcase/page.tsx"
+'use client'
+import { NextToolbarDemo } from '@angelitolm/next-toolbar'
+
+export default function Showcase() {
+  return <NextToolbarDemo pathname="/blog/hello" params={{ slug: 'hello' }} status={200} timingMs={42} isStatic />
+}
+```
+
+| Prop | Descripción |
+|---|---|
+| `pathname`, `params` | La página simulada |
+| `status`, `timingMs`, `via` | Status HTTP y TTFB (`'document'`) o tiempo de navegación (`'rsc'`) |
+| `isStatic` | Lo que dicen los datos de dev de Next: `true`, `false`, u omitido para "Rendering…" |
+| `insights` | Request insights simulados (se exportan los tipos `Insight`, `InsightFetch`, `InsightSpan`) |
+| `clientErrors` | Errores de cliente con `message` y `stack` opcional |
+| `nextVersion`, `theme` | Por defecto: `'16.3.6'` y `'system'` |
+
 ## Producción
 
 No hay nada que desactivar. La barra renderiza `null` siempre que `NODE_ENV` no sea `development`.

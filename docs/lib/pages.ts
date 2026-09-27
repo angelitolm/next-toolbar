@@ -93,4 +93,6 @@ export async function loadPage(locale: Locale, slug: Slug): Promise<ComponentTyp
 }
 
 export const REPO = 'https://github.com/angelitolm/next-toolbar'
+// The repo is private for now: GitHub links would 404 for visitors. Flip when it goes public.
+export const REPO_PUBLIC = false
 export const editUrl = (locale: Locale, slug: Slug) => `${REPO}/edit/main/docs/content/${locale}/${slug}.mdx`

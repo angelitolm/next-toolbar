@@ -1,6 +1,5 @@
 import '../globals.css'
-import { NextToolbar } from '@angelitolm/next-toolbar'
-import { ExportSquare } from 'iconsax-reactjs'
+import { ExportSquare, PlayCircle } from 'iconsax-reactjs'
 import type { Metadata } from 'next'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
@@ -13,7 +12,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
-import { REPO, SECTIONS, SLUGS, type Slug } from '@/lib/pages'
+import { REPO, REPO_PUBLIC, SECTIONS, SLUGS, type Slug } from '@/lib/pages'
 
 type Props = { children: ReactNode; params: Promise<{ locale: string }> }
 
@@ -25,6 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale })
   return {
+    metadataBase: new URL('https://next-toolbar.angellm.dev'),
     title: { template: `%s · NextToolbar`, default: t('meta.title') },
     description: t('meta.description'),
     icons: { icon: '/logo.svg' },
@@ -47,7 +47,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           <ThemeProvider>
             <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
               <div className="relative mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
-                <MobileNav label={t('ui.menu')} sections={sections} titles={titles} />
+                <MobileNav label={t('ui.menu')} sections={sections} titles={titles} demoLabel={t('demo.sidebarCta')} />
                 <Link href="/" className="flex items-center gap-2.5 font-bold tracking-tight">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/logo.svg" alt="" width={30} height={30} />
@@ -57,24 +57,33 @@ export default async function LocaleLayout({ children, params }: Props) {
                   </span>
                 </Link>
                 <div className="ml-auto flex items-center gap-2">
+                  <Link
+                    href="/demo"
+                    className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground md:flex"
+                  >
+                    <PlayCircle variant="Broken" className="size-4 text-brand-text" aria-hidden="true" />
+                    {t('ui.demo')}
+                  </Link>
                   <LocaleSwitch label={t('ui.language')} />
                   <ThemeToggle label={t('ui.theme')} />
-                  <a
-                    href={REPO}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground sm:flex"
-                  >
-                    {t('ui.github')}
-                    <ExportSquare variant="Broken" className="size-4" aria-hidden="true" />
-                  </a>
+                  {REPO_PUBLIC && (
+                    <a
+                      href={REPO}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground sm:flex"
+                    >
+                      {t('ui.github')}
+                      <ExportSquare variant="Broken" className="size-4" aria-hidden="true" />
+                    </a>
+                  )}
                 </div>
               </div>
             </header>
 
             <div className="mx-auto flex max-w-7xl gap-10 px-4 sm:px-6">
               <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-64 shrink-0 overflow-y-auto py-8 pr-2 lg:block">
-                <Sidebar sections={sections} titles={titles} />
+                <Sidebar sections={sections} titles={titles} demoLabel={t('demo.sidebarCta')} />
               </aside>
               <main className="min-w-0 flex-1 py-10 pb-32 lg:max-w-3xl">{children}</main>
             </div>
@@ -82,8 +91,6 @@ export default async function LocaleLayout({ children, params }: Props) {
             <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">{t('ui.license')}</footer>
           </ThemeProvider>
         </NextIntlClientProvider>
-        {/* Dogfooding: the docs run with the toolbar they document (dev only). */}
-        <NextToolbar />
       </body>
     </html>
   )

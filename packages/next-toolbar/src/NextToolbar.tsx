@@ -13,7 +13,7 @@ declare global {
   }
 }
 
-type Timing = { status?: number; ms: number; via: 'document' | 'rsc' }
+export type Timing = { status?: number; ms: number; via: 'document' | 'rsc' }
 
 const STORAGE_KEY = 'next-toolbar:collapsed'
 const THEME_KEY = 'next-toolbar:theme'
@@ -37,10 +37,41 @@ export function NextToolbar({ theme = 'system' }: NextToolbarProps = {}) {
 function Toolbar({ defaultTheme }: { defaultTheme: Theme }) {
   const pathname = usePathname()
   const params = useParams()
-  const root = useShadowRoot()
   const timings = useTimings()
   const { manifest, insights, connected, clear } = useHmr()
   const [errors, setErrors] = useClientErrors(pathname)
+  const nextVersion = typeof window !== 'undefined' ? window.next?.version : undefined
+
+  return (
+    <ToolbarView
+      defaultTheme={defaultTheme}
+      data={{ pathname, params, timing: timings[pathname], manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH }}
+      onClear={(keepId) => {
+        clear(keepId)
+        setErrors([])
+      }}
+    />
+  )
+}
+
+// Everything the bar shows. The live toolbar reads it from Next; NextToolbarDemo passes fixtures.
+export type ToolbarData = {
+  pathname: string
+  params: Record<string, string | string[] | undefined> | null
+  timing?: Timing
+  manifest: Record<string, boolean> | null
+  insights: Map<string, Insight>
+  connected: boolean
+  errors: ClientError[]
+  nextVersion?: string
+  basePath: string
+}
+
+type ViewProps = { data: ToolbarData; defaultTheme: Theme; onClear: (keepId?: string) => void }
+
+export function ToolbarView({ data, defaultTheme, onClear }: ViewProps) {
+  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath } = data
+  const root = useShadowRoot()
   const [collapsed, setCollapsed] = useState(false)
   const [profiler, setProfiler] = useState<{ open: boolean; id?: string }>({ open: false })
   const closeProfiler = useCallback(() => setProfiler((p) => ({ ...p, open: false })), [])
@@ -77,10 +108,8 @@ function Toolbar({ defaultTheme }: { defaultTheme: Theme }) {
 
   if (!root) return null
 
-  const nextVersion = typeof window !== 'undefined' ? window.next?.version : undefined
-  const timing = timings[pathname]
   const status = timing?.status
-  const insight = insightFor(insights.values(), pathname, BASE_PATH)
+  const insight = insightFor(insights.values(), pathname, basePath)
   const route = insight?.route ?? routePattern(pathname, params)
   const fetchStats = insight && fetchCacheStats(insight.fetches)
   const isNext16 = Number.parseInt(nextVersion ?? '', 10) >= 16
@@ -272,8 +301,7 @@ function Toolbar({ defaultTheme }: { defaultTheme: Theme }) {
           onSelect={(id) => setProfiler({ open: true, id })}
           onClose={closeProfiler}
           onClear={() => {
-            clear(insight?.requestId)
-            setErrors([])
+            onClear(insight?.requestId)
             setProfiler({ open: true, id: insight?.requestId })
           }}
           enabled={insightsAvailable}
@@ -420,7 +448,7 @@ function useHmr() {
   return { manifest, insights: insightsRef.current, connected, clear }
 }
 
-type ClientError = { message: string; stack?: string }
+export type ClientError = { message: string; stack?: string }
 
 function useClientErrors(pathname: string) {
   const [errors, setErrors] = useState<ClientError[]>([])

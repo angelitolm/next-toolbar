@@ -56,6 +56,28 @@ Clear them to go back to the defaults. If `localStorage` is unavailable (private
 
 Not a toolbar option, but worth repeating: add `app/error.tsx` so a render error doesn't take the root layout, and the toolbar, down with it. See [Getting started](./getting-started#4-add-an-error-boundary).
 
+## Demo component
+
+`NextToolbarDemo` renders the same toolbar from data you pass in, in any environment, production included. It's what powers the [live demo](./demo); use it for documentation, screenshots or showcases, not in your app.
+
+```tsx title="app/showcase/page.tsx"
+'use client'
+import { NextToolbarDemo } from '@angelitolm/next-toolbar'
+
+export default function Showcase() {
+  return <NextToolbarDemo pathname="/blog/hello" params={{ slug: 'hello' }} status={200} timingMs={42} isStatic />
+}
+```
+
+| Prop | Description |
+|---|---|
+| `pathname`, `params` | The simulated page |
+| `status`, `timingMs`, `via` | HTTP status and TTFB (`'document'`) or navigation time (`'rsc'`) |
+| `isStatic` | What Next's dev data says: `true`, `false`, or omitted for "Rendering…" |
+| `insights` | Simulated request insights (types `Insight`, `InsightFetch`, `InsightSpan` are exported) |
+| `clientErrors` | Client errors with `message` and optional `stack` |
+| `nextVersion`, `theme` | Defaults: `'16.3.6'` and `'system'` |
+
 ## Production
 
 There is nothing to switch off. The toolbar renders `null` whenever `NODE_ENV` isn't `development`.

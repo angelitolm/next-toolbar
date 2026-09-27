@@ -12,7 +12,8 @@
     "theme": "Cambiar tema",
     "language": "Idioma",
     "github": "GitHub",
-    "license": "Publicado bajo la licencia MIT."
+    "license": "Publicado bajo la licencia MIT.",
+    "demo": "Demo en vivo"
   },
   "sections": {
     "start": "Primeros pasos",
@@ -68,6 +69,60 @@
     "contributing": {
       "title": "Contribuir",
       "description": "Estructura del monorepo, el playground, tests, esta documentación y cómo publicar."
+    }
+  },
+  "demo": {
+    "title": "Demo en vivo",
+    "description": "La barra real, funcionando con peticiones simuladas. Elige un escenario y explora la barra de la parte inferior.",
+    "simulated": "NextToolbar solo funciona en next dev. Esta página alimenta el mismo componente con datos de ejemplo, para que la pruebes sin instalar nada.",
+    "scenarios": "Escenarios",
+    "page": "página",
+    "tryTitle": "Qué probar",
+    "try": {
+      "hover": "Pasa el ratón (o usa Tab) por cualquier segmento de la barra para abrir su panel.",
+      "profiler": "Haz clic en el id de la petición (#) para abrir el profiler: todas las peticiones, sus fetches y un timeline del render.",
+      "errors": "En el escenario 500, abre el panel de errores y haz clic en Details.",
+      "minimize": "Minimízala con el logo o el botón de cerrar, y luego haz clic en el círculo.",
+      "theme": "Cambia el tema con el botón de la derecha."
+    },
+    "cta": "Instálala en tu app",
+    "sidebarCta": "Prueba la demo en vivo",
+    "items": {
+      "home": {
+        "title": "Página estática",
+        "description": "Una página sin APIs de petición ni fetches.",
+        "expect": "200 · Static"
+      },
+      "blog": {
+        "title": "Post del blog",
+        "description": "Un segmento dinámico con dos fetches en caché, al que se llega navegando en el cliente.",
+        "expect": "Static? · 2 HIT"
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "Los datos de dev de Next dicen estática, pero un fetch usa no-store.",
+        "expect": "Dynamic (corregido) · MISS + SKIP"
+      },
+      "account": {
+        "title": "Cuenta",
+        "description": "Lee cookies(), así que se renderiza en cada petición.",
+        "expect": "Dynamic"
+      },
+      "checkout": {
+        "title": "Falla el checkout",
+        "description": "El proveedor de pagos no responde a tiempo y el render lanza un error.",
+        "expect": "500 · error de servidor"
+      },
+      "notFound": {
+        "title": "No encontrada",
+        "description": "Una ruta que no coincide con ninguna página.",
+        "expect": "404 · /_not-found"
+      },
+      "settings": {
+        "title": "Ajustes",
+        "description": "La página se renderiza bien, pero luego un componente falla en el navegador.",
+        "expect": "Error de cliente con stack"
+      }
     }
   }
 }

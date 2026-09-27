@@ -12,7 +12,8 @@
     "theme": "Toggle theme",
     "language": "Language",
     "github": "GitHub",
-    "license": "Released under the MIT License."
+    "license": "Released under the MIT License.",
+    "demo": "Live demo"
   },
   "sections": {
     "start": "Get started",
@@ -68,6 +69,60 @@
     "contributing": {
       "title": "Contributing",
       "description": "Monorepo layout, the playground, tests, these docs and releasing."
+    }
+  },
+  "demo": {
+    "title": "Live demo",
+    "description": "The real toolbar, running on simulated requests. Pick a scenario and explore the bar at the bottom of the page.",
+    "simulated": "NextToolbar only runs in next dev. This page feeds the same component with sample data, so you can try it without installing anything.",
+    "scenarios": "Scenarios",
+    "page": "page",
+    "tryTitle": "Things to try",
+    "try": {
+      "hover": "Hover (or Tab to) any segment of the bar to open its panel.",
+      "profiler": "Click the request id (#) to open the profiler: every request, its fetches and a render timeline.",
+      "errors": "In the 500 scenario, open the errors panel and click Details.",
+      "minimize": "Minimize it with the logo or the close button, then click the circle.",
+      "theme": "Switch the theme with the button on the right."
+    },
+    "cta": "Install it in your app",
+    "sidebarCta": "Try the live demo",
+    "items": {
+      "home": {
+        "title": "Static page",
+        "description": "A page with no request APIs and no fetches.",
+        "expect": "200 · Static"
+      },
+      "blog": {
+        "title": "Blog post",
+        "description": "A dynamic segment with two cached fetches, reached by client navigation.",
+        "expect": "Static? · 2 HIT"
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "Next's dev data says static, but one fetch uses no-store.",
+        "expect": "Dynamic (corrected) · MISS + SKIP"
+      },
+      "account": {
+        "title": "Account",
+        "description": "Reads cookies(), so it renders on every request.",
+        "expect": "Dynamic"
+      },
+      "checkout": {
+        "title": "Checkout fails",
+        "description": "The payment provider times out and the render throws.",
+        "expect": "500 · server error"
+      },
+      "notFound": {
+        "title": "Not found",
+        "description": "A path with no matching route.",
+        "expect": "404 · /_not-found"
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "The page renders fine, then a component throws in the browser.",
+        "expect": "Client error with stack"
+      }
     }
   }
 }

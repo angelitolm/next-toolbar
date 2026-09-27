@@ -1,8 +1,9 @@
+import { NextToolbar } from '@angelitolm/next-toolbar'
 import { ArrowLeft2, ArrowRight2, Edit2 } from 'iconsax-reactjs'
 import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
-import { ICONS, editUrl, hrefOf, loadPage, neighbours, type Slug } from '@/lib/pages'
+import { ICONS, REPO_PUBLIC, editUrl, hrefOf, loadPage, neighbours, type Slug } from '@/lib/pages'
 
 export async function DocPage({ locale, slug }: { locale: Locale; slug: Slug }) {
   const t = await getTranslations({ locale })
@@ -24,6 +25,7 @@ export async function DocPage({ locale, slug }: { locale: Locale; slug: Slug }) 
         <Content />
       </div>
 
+      {REPO_PUBLIC && (
       <div className="mt-12 flex justify-end">
         <a
           href={editUrl(locale, slug)}
@@ -35,6 +37,7 @@ export async function DocPage({ locale, slug }: { locale: Locale; slug: Slug }) 
           {t('ui.edit')}
         </a>
       </div>
+      )}
 
       <nav className="mt-6 grid gap-4 border-t border-border pt-8 sm:grid-cols-2" aria-label="Pagination">
         {prev ? (
@@ -58,6 +61,9 @@ export async function DocPage({ locale, slug }: { locale: Locale; slug: Slug }) 
           </Link>
         )}
       </nav>
+
+      {/* Dogfooding: the docs run with the toolbar they document (dev only). Not on /demo, which has its own. */}
+      <NextToolbar />
     </article>
   )
 }

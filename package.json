@@ -5,5 +5,9 @@
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm --filter @angelitolm/next-toolbar build",
     "test": "pnpm --filter @angelitolm/next-toolbar test"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22.18"
   }
 }
