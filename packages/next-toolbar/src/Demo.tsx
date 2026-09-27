@@ -61,6 +61,8 @@ export function NextToolbarDemo({
         errors: cleared ? NONE : clientErrors,
         nextVersion,
         basePath: '',
+        visits: NONE,
+        errorLog: NONE,
       }}
       onClear={(keep) => setCleared({ keep })}
     />

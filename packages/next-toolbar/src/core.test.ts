@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -152,4 +152,13 @@ test('refineRenderMode corrects dev static verdicts', () => {
   assert.equal(refineRenderMode('static', '/shop/[...path]', [noStore]).mode, 'dynamic') // definite wins
   assert.deepEqual(refineRenderMode('dynamic', '/blog/[slug]', [noStore]), { mode: 'dynamic' })
   assert.deepEqual(refineRenderMode('static', '/'), { mode: 'static' })
+})
+
+test('errorsDuring attributes client errors to the visit they happened in', () => {
+  const visit = (id: string, startTime: number) => ({ id, pathname: `/${id}`, route: `/${id}`, startTime })
+  const visits = [visit('a', 100), visit('b', 200), visit('c', 300)]
+  const errors = [{ message: 'e1', at: 150 }, { message: 'e2', at: 200 }, { message: 'e3', at: 250 }, { message: 'e4', at: 900 }, { message: 'e0', at: 50 }]
+  assert.deepEqual(errorsDuring(visits, errors, visits[0]).map((e) => e.message), ['e1'])
+  assert.deepEqual(errorsDuring(visits, errors, visits[1]).map((e) => e.message), ['e2', 'e3'])
+  assert.deepEqual(errorsDuring(visits, errors, visits[2]).map((e) => e.message), ['e4'])
 })

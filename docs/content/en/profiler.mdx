@@ -1,7 +1,7 @@
 The profiler is the toolbar's detail view. When the bar tells you something failed or took too long, this is where you find out why: a list of the requests the dev server handled, and everything NextToolbar knows about the one you select.
 
-<Callout type="note" title="Requires request insights">
-  The profiler needs Next.js 16.3+ with `experimental.requestInsights: true`. Without it, it opens with a hint explaining how to enable it. See [Configuration](./configuration).
+<Callout type="note" title="Two modes">
+  With Next.js 16.3+ and `experimental.requestInsights: true` it shows every server request in full detail. On older versions (or with the flag off) it falls back to the **page visits** the browser recorded; see [below](#without-request-insights).
 </Callout>
 
 ## Opening it
@@ -54,3 +54,14 @@ After a while the list mixes requests from many pages, reloads and tabs. **Clear
 <Callout type="note">
   "Older than" compares the dev server's clock with the browser's. On your own machine they're the same clock; with a remote dev server whose clock is off, a few old requests could reappear.
 </Callout>
+
+## Without request insights
+
+On Next 15 – 16.2, or on 16.3+ without `experimental.requestInsights`, the server sends no per-request data. The profiler then lists the **page visits** of the session, built from what the browser knows:
+
+- one entry per route change (prefetches aren't visits), newest first;
+- HTTP status, route pattern, and whether it was a full page load or a client navigation (RSC);
+- time to first byte, or the duration of the RSC request;
+- the **client errors** that happened during that visit, each expandable to its stack trace. The list shows a red count next to visits with errors.
+
+A note at the bottom says what the server side would add, and whether you need to upgrade Next or just enable the flag. **Clear** works the same way: it keeps the current visit and drops the rest, along with the client errors.

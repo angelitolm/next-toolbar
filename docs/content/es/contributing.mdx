@@ -76,6 +76,22 @@ Para añadir una página:
 
 Enlaza entre páginas con `./slug` (y `./` para la página de inicio); los enlaces mantienen el idioma del lector. Usa `<Callout type="note | tip | warning">` para los apartes.
 
+## Probar una versión en local
+
+Antes de publicar, prueba en una app real exactamente el paquete que recibiría npm:
+
+```bash
+pnpm test && pnpm run pack
+```
+
+Esto genera `.tarballs/angelitolm-next-toolbar-<versión>.tgz` (ignorado por git). Instala ese archivo en la app, reinicia `next dev` y compruébalo:
+
+```bash
+pnpm add -D C:/dev/next-toolbar/.tarballs/angelitolm-next-toolbar-0.2.0.tgz
+```
+
+No uses `pnpm link` para esto: el paquete usaría su propia copia de React de desarrollo y la app cargaría dos, lo que rompe los hooks. Cuando termines, vuelve a la versión del registro con `pnpm add -D @angelitolm/next-toolbar@latest`.
+
 ## Publicar una versión
 
 1. Sube `version` en `packages/next-toolbar/package.json`.

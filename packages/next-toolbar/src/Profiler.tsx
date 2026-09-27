@@ -1,7 +1,7 @@
-import { Fragment, useEffect } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { ArrowRight2, CloseCircle, Trash } from './icons'
 import { Logo } from './Logo'
-import { errorOrigins, fetchCacheStats, insightHttpStatus, pathOf, spanRows, type FetchCacheStats, type Insight, type InsightFetch } from './core'
+import { errorOrigins, errorsDuring, supportsRequestInsights, fetchCacheStats, type LoggedError, type Visit, insightHttpStatus, pathOf, spanRows, type FetchCacheStats, type Insight, type InsightFetch } from './core'
 
 type Props = {
   insights: Insight[] // newest first
@@ -10,10 +10,14 @@ type Props = {
   onClose: () => void
   onClear: () => void
   enabled: boolean
+  // Browser-side history, shown instead of insights when the Next version can't send them.
+  visits: Visit[]
+  errorLog: LoggedError[]
+  nextVersion?: string
 }
 
 // Request profiler panel: recent requests on the left, the selected one on the right.
-export function Profiler({ insights, selected, onSelect, onClose, onClear, enabled }: Props) {
+export function Profiler({ insights, selected, onSelect, onClose, onClear, enabled, visits, errorLog, nextVersion }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     addEventListener('keydown', onKey)
@@ -30,24 +34,20 @@ export function Profiler({ insights, selected, onSelect, onClose, onClear, enabl
           NextToolbar
         </span>
         <span className="dim">·</span>
-        <b>Requests</b>
-        <span className="dim">{insights.length} captured</span>
+        <b>{enabled ? 'Requests' : 'Page visits'}</b>
+        <span className="dim">{enabled ? insights.length : visits.length} captured</span>
         {enabled && <CacheSummary stats={fetchCacheStats(insights.flatMap((i) => i.fetches))} label="fetch cache (all)" />}
         <div className="spacer" />
-        {enabled && (
-          <button className="text-btn" onClick={onClear} title="Remove captured requests (except the current page's) and client errors">
-            <Trash size={15} />
-            Clear
-          </button>
-        )}
+        <button className="text-btn" onClick={onClear} title="Remove captured requests (except the current page's) and client errors">
+          <Trash size={15} />
+          Clear
+        </button>
         <button className="icon-btn" onClick={onClose} aria-label="Close profiler">
           <CloseCircle size={18} />
         </button>
       </header>
       {!enabled ? (
-        <div className="hint">
-          Per-request details need Next.js 16.3+ with <code>experimental: {'{'} requestInsights: true {'}'}</code> in next.config.
-        </div>
+        <BrowserHistory visits={visits} errorLog={errorLog} nextVersion={nextVersion} />
       ) : (
         <div className="profiler-body">
           <ul className="req-list">
@@ -68,6 +68,89 @@ export function Profiler({ insights, selected, onSelect, onClose, onClear, enabl
           <div className="req-detail">{selected ? <Detail insight={selected} /> : <div className="hint">Select a request.</div>}</div>
         </div>
       )}
+    </div>
+  )
+}
+
+// Fallback for Next 15 – 16.2 (or insights disabled): what the browser knows about each page visit.
+function BrowserHistory({ visits, errorLog, nextVersion }: { visits: Visit[]; errorLog: LoggedError[]; nextVersion?: string }) {
+  const [selectedId, setSelectedId] = useState<string>()
+  const recent = [...visits].reverse()
+  const selected = recent.find((v) => v.id === selectedId) ?? recent[0]
+  const errors = selected ? errorsDuring(visits, errorLog, selected) : []
+
+  return (
+    <div className="profiler-body">
+      <ul className="req-list">
+        {recent.map((v) => {
+          const count = errorsDuring(visits, errorLog, v).length
+          return (
+            <li key={v.id}>
+              <button className={v.id === selected?.id ? 'active' : ''} onClick={() => setSelectedId(v.id)}>
+                <span className={`pill ${statusClass(v.status, 'ok')}`}>{v.status ?? '—'}</span>
+                <span className="req-route">{v.route}</span>
+                {count > 0 && <span className="count err">{count}</span>}
+                {v.via === 'rsc' && <span className="tag">RSC</span>}
+                <span className="dim">{ms(v.ms)}</span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      <div className="req-detail">
+        {selected ? (
+          <>
+            <section>
+              <h3>Summary</h3>
+              <dl>
+                <dt>Path</dt>
+                <dd><code>{selected.pathname}</code></dd>
+                <dt>Route</dt>
+                <dd>{selected.route}</dd>
+                <dt>Type</dt>
+                <dd>{selected.via === 'rsc' ? 'Client navigation (RSC payload)' : selected.via === 'document' ? 'Full page load' : '—'}</dd>
+                <dt>Status</dt>
+                <dd>{selected.status ?? '—'}</dd>
+                <dt>{selected.via === 'rsc' ? 'RSC request' : 'Time to first byte'}</dt>
+                <dd>{ms(selected.ms)}</dd>
+                <dt>Visited</dt>
+                <dd>{new Date(selected.startTime).toLocaleTimeString()}</dd>
+              </dl>
+            </section>
+            <section>
+              <h3>
+                Client errors <span className={`count ${errors.length ? 'err' : ''}`}>{errors.length}</span>
+              </h3>
+              {errors.length === 0 && <div className="hint">No client errors during this visit.</div>}
+              {errors.map((e, i) => (
+                <details key={i} className="error-row">
+                  <summary>
+                    <ArrowRight2 className="chevron" size={14} />
+                    <code>{e.message}</code>
+                  </summary>
+                  <pre className="stack">{e.stack ?? 'No stack trace available.'}</pre>
+                </details>
+              ))}
+            </section>
+          </>
+        ) : (
+          <div className="hint">Navigate to record page visits.</div>
+        )}
+        <div className="note">
+          {supportsRequestInsights(nextVersion) ? (
+            <>
+              Enable <code>experimental.requestInsights</code> in next.config for server render time, fetches with cache outcome,
+              server errors and the span timeline.
+            </>
+          ) : (
+            <>
+              Server render time, fetches with cache outcome, server errors and the span timeline need Next.js 16.3+ with{' '}
+              <code>experimental.requestInsights</code>
+              {nextVersion ? ` (this app runs ${nextVersion})` : ''}.
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

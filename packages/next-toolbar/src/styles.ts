@@ -222,6 +222,10 @@ td code { word-break: break-all; }
 .error-row > summary::-webkit-details-marker { display: none; }
 .error-row dl { padding: 4px 12px 8px 34px; grid-template-columns: 120px 1fr; }
 .error-row .hint { padding: 0 12px 12px 34px; }
+.error-row pre.stack { margin: 0 12px 12px; padding: 8px 10px; max-height: 220px; overflow: auto; border-radius: 6px; background: var(--nt-raised); font: 11px/1.5 var(--nt-mono); white-space: pre-wrap; word-break: break-word; }
+.note { margin-top: 24px; padding: 10px 12px; border: 1px dashed var(--nt-border); border-radius: 8px; color: var(--nt-dim); font-size: 12px; line-height: 1.5; }
+.note code { color: var(--nt-text); }
+.req-list .count { min-width: 18px; height: 18px; font-size: 10px; }
 .timeline { font-size: 12px; }
 .span-row { display: grid; grid-template-columns: minmax(140px, 32%) 1fr 64px; gap: 10px; align-items: center; height: 24px; padding: 0 6px; border-radius: 6px; }
 .span-row:hover { background: var(--nt-raised); }

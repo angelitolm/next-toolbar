@@ -1,7 +1,7 @@
 El profiler es la vista de detalle de la barra. Cuando la barra te dice que algo falló o tardó demasiado, aquí descubres por qué: una lista de las peticiones que atendió el servidor de desarrollo, y todo lo que NextToolbar sabe sobre la que selecciones.
 
-<Callout type="note" title="Requiere request insights">
-  El profiler necesita Next.js 16.3+ con `experimental.requestInsights: true`. Sin ello, se abre con una pista que explica cómo activarlo. Consulta [Configuración](./configuration).
+<Callout type="note" title="Dos modos">
+  Con Next.js 16.3+ y `experimental.requestInsights: true` muestra cada petición del servidor con todo detalle. En versiones anteriores (o con el flag desactivado) recurre a las **visitas de página** que registró el navegador; consulta [más abajo](#sin-request-insights).
 </Callout>
 
 ## Cómo abrirlo
@@ -54,3 +54,14 @@ Al cabo de un rato la lista mezcla peticiones de muchas páginas, recargas y pes
 <Callout type="note">
   "Anterior a" compara el reloj del servidor de desarrollo con el del navegador. En tu propia máquina son el mismo reloj; con un servidor de desarrollo remoto cuyo reloj esté desajustado, podrían reaparecer algunas peticiones antiguas.
 </Callout>
+
+## Sin request insights
+
+En Next 15 – 16.2, o en 16.3+ sin `experimental.requestInsights`, el servidor no envía datos por petición. Entonces el profiler lista las **visitas de página** de la sesión, construidas con lo que sabe el navegador:
+
+- una entrada por cada cambio de ruta (los prefetches no cuentan como visitas), la más reciente primero;
+- status HTTP, patrón de ruta y si fue una carga completa o una navegación en el cliente (RSC);
+- el tiempo hasta el primer byte, o la duración de la petición RSC;
+- los **errores de cliente** que ocurrieron durante esa visita, cada uno desplegable con su stack. La lista muestra un contador rojo junto a las visitas con errores.
+
+Una nota al final indica qué añadiría la parte del servidor, y si necesitas actualizar Next o solo activar el flag. **Clear** funciona igual: conserva la visita actual y descarta el resto, junto con los errores de cliente.

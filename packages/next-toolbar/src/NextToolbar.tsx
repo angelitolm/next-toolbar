@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname } from 'next/navigation'
-import { alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
+import { type LoggedError, type Visit, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
 import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, Hashtag, Monitor, Moon, Routing2, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { CachePill, CacheSummary, Profiler } from './Profiler'
@@ -39,16 +39,20 @@ function Toolbar({ defaultTheme }: { defaultTheme: Theme }) {
   const params = useParams()
   const timings = useTimings()
   const { manifest, insights, connected, clear } = useHmr()
-  const [errors, setErrors] = useClientErrors(pathname)
+  const { errors, setErrors, log, setLog } = useClientErrors(pathname)
   const nextVersion = typeof window !== 'undefined' ? window.next?.version : undefined
+  const timing = timings[pathname]
+  const [visits, setVisits] = useVisits(pathname, routePattern(pathname, params), timing)
 
   return (
     <ToolbarView
       defaultTheme={defaultTheme}
-      data={{ pathname, params, timing: timings[pathname], manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH }}
+      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log }}
       onClear={(keepId) => {
         clear(keepId)
         setErrors([])
+        setLog([])
+        setVisits((v) => v.slice(-1))
       }}
     />
   )
@@ -65,12 +69,15 @@ export type ToolbarData = {
   errors: ClientError[]
   nextVersion?: string
   basePath: string
+  /** Browser-side history, used by the profiler when request insights aren't available. */
+  visits: Visit[]
+  errorLog: LoggedError[]
 }
 
 type ViewProps = { data: ToolbarData; defaultTheme: Theme; onClear: (keepId?: string) => void }
 
 export function ToolbarView({ data, defaultTheme, onClear }: ViewProps) {
-  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath } = data
+  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog } = data
   const root = useShadowRoot()
   const [collapsed, setCollapsed] = useState(false)
   const [profiler, setProfiler] = useState<{ open: boolean; id?: string }>({ open: false })
@@ -309,6 +316,9 @@ export function ToolbarView({ data, defaultTheme, onClear }: ViewProps) {
             setProfiler({ open: true, id: insight?.requestId })
           }}
           enabled={insightsAvailable}
+          visits={visits}
+          errorLog={errorLog}
+          nextVersion={nextVersion}
         />
       )}
       {ui}
@@ -461,11 +471,17 @@ function useHmr() {
 
 export type ClientError = { message: string; stack?: string }
 
+// `errors` belongs to the current page (reset on navigation); `log` keeps the whole session
+// for the browser-side profiler, timestamped so errors can be matched to visits.
 function useClientErrors(pathname: string) {
   const [errors, setErrors] = useState<ClientError[]>([])
+  const [log, setLog] = useState<LoggedError[]>([])
   useEffect(() => setErrors([]), [pathname])
   useEffect(() => {
-    const push = (error: ClientError) => setErrors((e) => [...e.slice(-19), error])
+    const push = (error: ClientError) => {
+      setErrors((e) => [...e.slice(-19), error])
+      setLog((l) => [...l.slice(-99), { ...error, at: Date.now() }])
+    }
     const onError = (e: ErrorEvent) => push({ message: e.message || String(e.error), stack: e.error?.stack })
     const onRejection = (e: PromiseRejectionEvent) =>
       push({ message: `Unhandled rejection: ${e.reason?.message ?? String(e.reason)}`, stack: e.reason?.stack })
@@ -476,5 +492,31 @@ function useClientErrors(pathname: string) {
       removeEventListener('unhandledrejection', onRejection)
     }
   }, [])
-  return [errors, setErrors] as const
+  return { errors, setErrors, log, setLog }
+}
+
+// One visit per route change (prefetches never change the route, so they're not visits).
+// The timing arrives from the Performance API around the same time and is copied onto the
+// latest visit once it does.
+function useVisits(pathname: string, route: string, timing: Timing | undefined) {
+  const [visits, setVisits] = useState<Visit[]>([])
+  const seq = useRef(0)
+  useEffect(() => {
+    setVisits((v) =>
+      // Same page as the last visit: React Strict Mode re-running the effect, not a navigation.
+      v[v.length - 1]?.pathname === pathname
+        ? v
+        : [...v.slice(-(MAX_INSIGHTS - 1)), { id: `v${++seq.current}`, pathname, route, startTime: Date.now() }],
+    )
+  }, [pathname, route])
+  useEffect(() => {
+    if (!timing) return
+    setVisits((v) => {
+      const last = v[v.length - 1]
+      if (!last || last.pathname !== pathname) return v
+      if (last.ms === timing.ms && last.status === timing.status) return v
+      return [...v.slice(0, -1), { ...last, status: timing.status, ms: timing.ms, via: timing.via }]
+    })
+  }, [pathname, timing])
+  return [visits, setVisits] as const
 }

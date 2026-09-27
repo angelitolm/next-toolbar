@@ -76,10 +76,26 @@ To add a page:
 
 Link between pages with `./slug` (and `./` for the home page); the links keep the reader's language. Use `<Callout type="note | tip | warning">` for asides.
 
+## Testing a release locally
+
+Before publishing, try the exact package npm would get in a real app:
+
+```bash
+pnpm test && pnpm run pack
+```
+
+This writes `.tarballs/angelitolm-next-toolbar-<version>.tgz` (git-ignored). Install that file in the app, restart `next dev` and check it:
+
+```bash
+pnpm add -D C:/dev/next-toolbar/.tarballs/angelitolm-next-toolbar-0.2.0.tgz
+```
+
+Don't use `pnpm link` for this: the package would resolve its own dev copy of React and the app would load two, which breaks hooks. When you're done, go back to the registry version with `pnpm add -D @angelitolm/next-toolbar@latest`.
+
 ## Releasing
 
 1. Bump `version` in `packages/next-toolbar/package.json`.
-2. `pnpm build && pnpm test`
+2. `pnpm build && pnpm test`, then test the tarball as above.
 3. From `packages/next-toolbar`: `npm publish`. The package is scoped and `publishConfig.access` is `public`.
 
 ## License

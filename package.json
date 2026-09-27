@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm --filter @angelitolm/next-toolbar build",
-    "test": "pnpm --filter @angelitolm/next-toolbar test"
+    "test": "pnpm --filter @angelitolm/next-toolbar test",
+    "pack": "pnpm build && pnpm --filter @angelitolm/next-toolbar pack --pack-destination ../../.tarballs"
   },
   "packageManager": "pnpm@11.9.0",
   "engines": {

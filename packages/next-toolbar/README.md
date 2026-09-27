@@ -16,7 +16,7 @@ Shows, for the current page:
 - Client and server errors: click a server error to open it in the profiler, expand a client error to see its stack
 - Next.js and React versions
 
-Click the request id (e.g. `7b5063`) to open the profiler: recent requests (documents and RSC payloads) with status, summary, root-cause errors, server fetches and a span timeline. Needs Next 16.3+ with `experimental.requestInsights`. **Clear** empties the request list (keeping the current page's request) and the client errors. Esc closes it.
+Click the request id (e.g. `7b5063`) to open the profiler: recent requests (documents and RSC payloads) with status, summary, root-cause errors, server fetches and a span timeline. Full detail needs Next 16.3+ with `experimental.requestInsights`; on older versions it lists the page visits recorded by the browser (status, route, timing, client errors). **Clear** empties the request list (keeping the current page's request) and the client errors. Esc closes it.
 
 Requires Next.js 15+ and React 19. `basePath` and `assetPrefix` work without extra config.
 

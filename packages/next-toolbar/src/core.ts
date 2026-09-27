@@ -134,6 +134,26 @@ export function fetchCacheStats(fetches: InsightFetch[]): FetchCacheStats {
   return s
 }
 
+// A page the user was on, recorded from the browser when request insights aren't available
+// (Next 15 – 16.2). Built from route changes, so prefetches never show up as visits.
+export type Visit = {
+  id: string
+  pathname: string
+  route: string
+  startTime: number
+  status?: number
+  ms?: number
+  via?: 'document' | 'rsc'
+}
+
+export type LoggedError = { message: string; stack?: string; at: number }
+
+// Client errors raised while `visit` was the current page: from its start until the next visit.
+export function errorsDuring(visits: Visit[], errors: LoggedError[], visit: Visit): LoggedError[] {
+  const next = Math.min(...visits.filter((v) => v.startTime > visit.startTime).map((v) => v.startTime), Infinity)
+  return errors.filter((e) => e.at >= visit.startTime && e.at < next)
+}
+
 export type HmrEvent =
   | { kind: 'manifest'; data: Record<string, boolean> }
   | { kind: 'insights'; list: Insight[] }
