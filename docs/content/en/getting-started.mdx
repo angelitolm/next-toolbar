@@ -1,0 +1,80 @@
+## 1. Install
+
+```bash
+pnpm add -D @angelitolm/next-toolbar
+```
+
+npm and yarn work the same way (`npm i -D …`, `yarn add -D …`). Install it as a dev dependency: it never renders in production.
+
+## 2. Add it to the root layout
+
+```tsx title="app/layout.tsx"
+import { NextToolbar } from '@angelitolm/next-toolbar'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <NextToolbar />
+      </body>
+    </html>
+  )
+}
+```
+
+`NextToolbar` is a client component (the package ships with the `'use client'` directive), so you can render it from a Server Component layout without wrapping it.
+
+Put it in the **root** layout so it survives navigation between routes and keeps its connection to the dev server.
+
+## 3. Recommended `next.config.ts`
+
+```ts title="next.config.ts"
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  // Next's own dev indicator sits bottom-left by default and overlaps the toolbar.
+  devIndicators: { position: 'top-right' },
+  // Next 16 only: server timing, fetches, exact route patterns and the profiler.
+  experimental: { requestInsights: true },
+}
+
+export default nextConfig
+```
+
+Both options are optional:
+
+- Without `devIndicators.position`, Next's round "N" indicator sits on top of the toolbar's left edge. You can also turn it off with `devIndicators: false`.
+- Without `requestInsights` (or on Next 15) the toolbar still shows status, route, render mode, client timing, client errors and versions, but not server timing, fetches, the no-store render-mode correction or the profiler. See [Compatibility](./compatibility).
+
+## 4. Add an error boundary
+
+<Callout type="warning" title="Recommended">
+  If a page throws while rendering and there is no `app/error.tsx`, Next replaces the whole root layout with its fallback, and the toolbar goes with it.
+</Callout>
+
+A minimal boundary keeps the layout, and therefore the toolbar, on screen:
+
+```tsx title="app/error.tsx"
+'use client'
+
+export default function Error({ error }: { error: Error }) {
+  return <h1>Something went wrong: {error.message}</h1>
+}
+```
+
+## 5. Run
+
+```bash
+pnpm dev
+```
+
+Open any page. The toolbar appears as a strip across the bottom of the window:
+
+- hover any segment for details;
+- click the request id (`# f9b45c`) to open the [profiler](./profiler);
+- click the logo or the close button to minimize it to a circle.
+
+## Production
+
+Nothing to do. The component checks `process.env.NODE_ENV !== 'development'` and returns `null`, so it renders nothing in production and never opens a connection. Because Next inlines `NODE_ENV` at build time, the minifier can drop the unreachable toolbar code as well. You don't need to import it conditionally.

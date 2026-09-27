@@ -1,0 +1,78 @@
+The toolbar is a full-width strip floating 16 px above the bottom of the window. Every segment summarizes one aspect of the **current page**; hover it (or focus it with <kbd>Tab</kbd>) to open a panel with the details.
+
+```
+ N │ 200  # f9b45c  ⌥ /blog/[slug]  Static? │ ⏱ 39 ms server 46 ms nav  ⇄ fetch 3  ⚠ errors 0 │ … ⌘ Next 16.3.6  ◐  ⊗
+ 1    2      3            4            5            6                     7          8            9          10  11
+```
+
+## Segments
+
+| # | Segment | What it shows | Hover panel |
+|---|---|---|---|
+| 1 | **Logo** | The NextToolbar mark. Click to minimize. | — |
+| 2 | **Status** | HTTP status: gradient chip for 2xx, amber for 3xx, red for 4xx/5xx, grey `—` when unknown | Status and whether it came from a document request or a client navigation (RSC) |
+| 3 | **Request id** | First 6 characters of the server request id, or `profiler` when request insights are off | — Click opens the [profiler](./profiler) on this request |
+| 4 | **Route** | The route pattern that matched, e.g. `/blog/[slug]` | Pattern, real path and every `params.*` value |
+| 5 | **Render mode** | `Static`, `Dynamic`, `Static?`, `Rendering…` or `?` | Why, plus what dev can and can't tell. See [Render mode](./render-mode) |
+| 6 | **Timing** | `server`: server render time. `TTFB`: time to first byte of a full load. `nav`: duration of a client navigation's RSC request | Each value, and a hint to enable request insights if they're off |
+| 7 | **Fetch** | Server `fetch` calls and cache hit rate. Only with request insights | Cache summary and every fetch. See [Fetch cache](./fetch-cache) |
+| 8 | **Errors** | Client errors + server error of this page. Red when > 0 | Server errors (click → profiler) and client errors (expand → stack) |
+| 9 | **Next** | Installed Next.js version | React version, request insights on/off, HMR socket connected/disconnected |
+| 10 | **Theme** | Current theme | Click cycles system → light → dark |
+| 11 | **Minimize** | Close icon | Collapses the toolbar to a circle |
+
+The status, route and timing always describe the **page you're on**. When you navigate client-side, the toolbar switches to the new page's data as soon as its RSC request finishes.
+
+### Where each value comes from
+
+| Value | Source |
+|---|---|
+| Status, TTFB | Browser [Navigation Timing](https://developer.mozilla.org/docs/Web/API/PerformanceNavigationTiming) (`responseStatus`, `responseStart`) |
+| Status and `nav` on client navigations | Browser [Resource Timing](https://developer.mozilla.org/docs/Web/API/PerformanceResourceTiming) of the `?_rsc=` request |
+| Route (Next 16) | `route` of the request insight Next sends over the dev HMR socket |
+| Route (Next 15 / no insights) | Rebuilt from `usePathname()` and `useParams()` |
+| Render mode | Next's dev static indicator data, corrected with fetch information |
+| Server time, fetches, server errors | Next 16 request insights |
+| Client errors | `window` `error` and `unhandledrejection` events |
+
+More in [How it works](./architecture).
+
+## Errors
+
+The errors segment counts **client errors on the current page** plus **one server error** if the server request for this page ended with an error.
+
+- **Server errors** show the span where the error originated and its message, e.g. `AppRender.waitShellReady · boom`. Click the row (**Details**) to open the profiler on that request with the error expanded.
+- **Client errors** (uncaught exceptions and unhandled promise rejections) expand in place to show their stack trace.
+- Client errors reset when you navigate to another page and are capped at the last 20. The profiler's **Clear** empties them too.
+
+<Callout type="note">
+  The server stack trace never reaches the browser. It's printed in the terminal running `next dev`.
+</Callout>
+
+## Minimizing
+
+Click the logo or the close button and the toolbar shrinks into a **52 px circle** in the bottom-left corner. The circle keeps you informed:
+
+- a **gradient dot** when the page returned 2xx; amber for 3xx, red for 4xx/5xx, grey when unknown;
+- a **red bubble with the count** when the page has errors.
+
+Click the circle to expand the toolbar again. The collapsed state is remembered per browser.
+
+## Theme
+
+The toolbar follows the OS light/dark preference by default. The theme button cycles **system → light → dark** and remembers the choice. Set the initial theme with the `theme` prop; see [Configuration](./configuration).
+
+## Responsive behavior
+
+| Viewport | Behavior |
+|---|---|
+| wider than 1024 px | Everything visible |
+| up to 1024 px | Hides the Next version, the `fetch` / `errors` labels, the TTFB/nav value when server time is available, and the `% hit` label |
+| up to 640 px | 8 px margins; the bar scrolls horizontally. The logo on the left always minimizes it |
+
+## Keyboard and accessibility
+
+- <kbd>Tab</kbd> moves through the segments; a focused segment opens its panel.
+- <kbd>Esc</kbd> closes the profiler.
+- Animations are disabled when the OS asks for reduced motion.
+- The toolbar lives in a Shadow DOM: your CSS can't break it and its CSS can't leak into your app.

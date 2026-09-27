@@ -1,0 +1,61 @@
+Con las request insights activadas, NextToolbar muestra cada `fetch` que hicieron tus server components y qué hizo con él la **caché de datos** de Next.
+
+## Resultados
+
+Estos son los valores que Next registra internamente (`next/dist/server/lib/patch-fetch.js`):
+
+| Resultado | Significado |
+|---|---|
+| **HIT** | Servido desde la caché de datos. |
+| **HMR** | Solo en desarrollo: reutilizado a través de una recarga en caliente para que editar código no vuelva a pedirlo todo. |
+| **MISS** | Cacheable; se pidió al origen y se guardó. |
+| **SKIP** | No cacheable: `no-store`, `revalidate: 0`, una recarga forzada… |
+| **?** | Sin información de caché: el fetch falló, o la versión de Next no la reporta. |
+
+## Porcentaje de acierto
+
+```
+hit rate = (HIT + HMR) / (HIT + HMR + MISS)
+```
+
+`SKIP` y los fetches desconocidos quedan fuera: nunca se pretendió que se guardaran en caché, así que no deberían bajar el porcentaje. Si nada era cacheable, no se muestra ningún porcentaje.
+
+## Motivos de caché
+
+Next adjunta un motivo a cada resultado. El profiler lo muestra junto a la píldora:
+
+| Motivo | Qué lo causó |
+|---|---|
+| `revalidate: never` | `cache: 'force-cache'` (Next lo guarda como un revalidate "infinito", 4294967294 s) |
+| `revalidate: 30` | `next: { revalidate: 30 }` o el `revalidate` del segmento |
+| `cache: no-store` / `cache: no-cache` | Las opciones del fetch |
+| `fetchCache = …` | La configuración `fetchCache` del segmento |
+| `noStore call` | Se llamó a `noStore()` antes del fetch |
+| `auto cache` / `auto no cache` | Sin opción explícita: decidió Next (p. ej. `POST` o cabeceras de autenticación → sin caché) |
+| `cache-control: no-cache (hard refresh)` | El navegador hizo una recarga forzada; Next se saltó la caché a propósito |
+
+## Dónde lo ves
+
+- **Barra**: `fetch 3 · 67% hit` para la página actual.
+- **Panel de fetch** (al pasar el ratón): chips de resultado (`HIT 2 · SKIP 1`) y cada fetch con su resultado y tiempo.
+- **Profiler**: una tabla por petición con resultado y motivo, y los totales de cada petición capturada en la cabecera.
+
+## Un ejemplo práctico
+
+El playground tiene una página `/cache` con tres fetches a una API local:
+
+```tsx
+fetch(`${api}?forced`, { cache: 'force-cache' })
+fetch(`${api}?revalidated`, { next: { revalidate: 30 } })
+fetch(`${api}?fresh`, { cache: 'no-store' })
+```
+
+| Carga | forced | revalidated | fresh | Porcentaje |
+|---|---|---|---|---|
+| Recarga forzada (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>) | SKIP (hard refresh) | SKIP (hard refresh) | SKIP (no-store) | — |
+| Navegación en el cliente | HIT (never) | HIT (30) | SKIP (no-store) | 100% |
+| Tras editar un archivo | HMR | HMR | SKIP | 100% |
+
+<Callout type="tip">
+  El fetch `no-store` es también la razón por la que esta página muestra **Dynamic** aunque los datos de desarrollo de Next digan estática. Consulta [Modo de render](./render-mode#fetches-no-store).
+</Callout>

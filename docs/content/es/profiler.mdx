@@ -1,0 +1,56 @@
+El profiler es la vista de detalle de la barra. Cuando la barra te dice que algo falló o tardó demasiado, aquí descubres por qué: una lista de las peticiones que atendió el servidor de desarrollo, y todo lo que NextToolbar sabe sobre la que selecciones.
+
+<Callout type="note" title="Requiere request insights">
+  El profiler necesita Next.js 16 con `experimental.requestInsights: true`. Sin ello, se abre con una pista que explica cómo activarlo. Consulta [Configuración](./configuration).
+</Callout>
+
+## Cómo abrirlo
+
+- Haz clic en el **id de petición** de la barra (`# f9b45c`). El profiler se abre en la petición de la página actual.
+- Haz clic en un **error del servidor** en el panel de errores. El profiler se abre en esa petición con el error expandido.
+- Pulsa <kbd>Esc</kbd> o el botón de cerrar para cerrarlo.
+
+## Lista de peticiones
+
+La columna izquierda enumera cada petición capturada, de la más reciente a la más antigua, hasta las últimas **100**:
+
+- una píldora de estado (degradado para 2xx, ámbar 3xx, rojo 4xx/5xx, `ERR` cuando la petición falló sin estado);
+- el patrón de ruta;
+- una etiqueta **RSC** para los payloads de React Server Components, es decir, navegaciones en el cliente y prefetches;
+- la duración en el servidor.
+
+Los route handlers (por ejemplo `/api/time`) también aparecen, así ves las llamadas que una página hizo a tu propia API.
+
+La cabecera muestra el resultado de caché de **todos** los fetches capturados, p. ej. `HIT 6 · HMR 3 · SKIP 5 · 100% hit`.
+
+## Detalle de la petición
+
+### Resumen
+
+URL, ruta, tipo (documento o payload RSC), estado HTTP y resultado, duración, hora de inicio e id de la petición.
+
+### Errores
+
+Solo se enumeran los spans donde se **originó** un error, no cada span padre por el que se propagó. Cuando algunos llevan un mensaje y otros son simples envoltorios, solo se muestran los que tienen mensaje.
+
+Cada error se expande para mostrar su tipo, mensaje, span, cuándo ocurrió (`+25 ms · took 15 ms`) y cada atributo que Next adjuntó al span. El primero se abre automáticamente.
+
+### Fetches
+
+Cada `fetch` del servidor de la petición con método, URL, estado HTTP, [resultado de caché](./fetch-cache) con su motivo, y duración.
+
+### Timeline
+
+Una cascada de los spans que Next registró para la petición: resolver la página, construir el árbol de componentes, renderizar, hacer streaming, cada fetch… Las filas se anidan según su span padre y se escalan a la duración de la petición. Los spans con error aparecen en rojo.
+
+## Clear
+
+Al cabo de un rato la lista mezcla peticiones de muchas páginas, recargas y pestañas. **Clear** (arriba a la derecha) la vacía:
+
+- elimina cada petición capturada **excepto la de la página actual**, para que la barra conserve su tiempo del servidor, sus fetches y su ruta;
+- también borra los **errores del cliente** de la página actual;
+- las peticiones borradas no vuelven: Next reenvía su instantánea completa de peticiones cuando el socket se reconecta o la app se recompila, y la barra ignora todo lo que sea anterior al momento en que borraste.
+
+<Callout type="note">
+  "Anterior a" compara el reloj del servidor de desarrollo con el del navegador. En tu propia máquina son el mismo reloj; con un servidor de desarrollo remoto cuyo reloj esté desajustado, podrían reaparecer algunas peticiones antiguas.
+</Callout>

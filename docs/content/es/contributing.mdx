@@ -1,0 +1,87 @@
+## Estructura del repositorio
+
+```
+next-toolbar/
+├── packages/next-toolbar/   the npm package (@angelitolm/next-toolbar)
+│   ├── src/                 component, core logic, styles, icons
+│   ├── logo.svg
+│   └── README.md            the README published to npm
+├── playground/              Next app with one route per scenario
+├── docs/                    this documentation site (Next + MDX, en/es)
+├── pnpm-workspace.yaml
+└── LICENSE
+```
+
+## Requisitos previos
+
+- Node.js **22.18+** (los tests ejecutan TypeScript directamente con el type stripping de Node)
+- pnpm **11**
+
+```bash
+pnpm install
+```
+
+## Scripts
+
+| Comando | Qué hace |
+|---|---|
+| `pnpm dev` | Compila el paquete en modo watch y arranca el playground (puerto 3100) y la documentación (puerto 3200) |
+| `pnpm build` | Compila el paquete con tsup |
+| `pnpm test` | Ejecuta los tests unitarios del paquete |
+| `pnpm --filter @angelitolm/next-toolbar typecheck` | Comprueba los tipos del paquete |
+| `pnpm --filter docs test` | Comprueba que ambos idiomas tienen los mismos mensajes y páginas |
+
+## El playground
+
+Cada ruta pone a prueba un escenario:
+
+| Ruta | Escenario |
+|---|---|
+| `/` | Página estática |
+| `/dynamic` | Usa `headers()`: Dynamic |
+| `/isr` | `revalidate = 60` y un fetch externo (falla sin conexión: un error del servidor) |
+| `/cache` | Fetches `force-cache`, `revalidate: 30` y `no-store` a una API local |
+| `/blog/[slug]` | Segmento dinámico sin `generateStaticParams`: `Static?` |
+| `/boom` | Lanza un error al renderizar: 500 y un error del servidor (se mantiene visible gracias a `app/error.tsx`) |
+| `/nope` | 404 |
+| `/client-error` | Botón que lanza un error en el navegador |
+| `/api/time` | Route handler usado por `/cache` |
+
+Su `next.config.ts` activa `requestInsights` y mueve el indicador de Next arriba a la derecha.
+
+## Convenciones de código
+
+- La lógica que merezca probarse va en `src/core.ts` como funciones puras, con un test en `core.test.ts`. Los archivos de componentes se mantienen ligeros.
+- Nada de nuevas dependencias en tiempo de ejecución: el paquete solo tiene peer dependencies.
+- Todo lo que lea internals de Next debe degradar a `?` si faltan los datos.
+- Sigue el estilo del código que lo rodea: TypeScript, comillas simples, sin punto y coma.
+
+## El sitio de documentación
+
+La documentación es una app de Next.js con MDX, next-intl (inglés y español) y Tailwind.
+
+| Ruta | Propósito |
+|---|---|
+| `content/<locale>/<slug>.mdx` | Contenido de la página (sin título `#`; viene de los mensajes) |
+| `messages/<locale>.json` | Textos de la interfaz, nombres de secciones, títulos y descripciones de las páginas |
+| `lib/pages.ts` | Orden de las páginas, secciones, iconos y la tabla de imports MDX |
+| `mdx-components.tsx` | `<Callout>` y enlaces que respetan el idioma |
+
+Para añadir una página:
+
+1. Añade el slug a una sección en `lib/pages.ts`, con un icono y sus dos imports.
+2. Crea `content/en/<slug>.mdx` y `content/es/<slug>.mdx`.
+3. Añade `pages.<slug>.title` y `description` a ambos archivos de mensajes.
+4. Ejecuta `pnpm --filter docs test`.
+
+Enlaza entre páginas con `./slug` (y `./` para la página de inicio); los enlaces mantienen el idioma del lector. Usa `<Callout type="note | tip | warning">` para los apartes.
+
+## Publicar una versión
+
+1. Sube `version` en `packages/next-toolbar/package.json`.
+2. `pnpm build && pnpm test`
+3. Desde `packages/next-toolbar`: `npm publish`. El paquete tiene scope y `publishConfig.access` es `public`.
+
+## Licencia
+
+MIT, © 2023–2026 Angel Labrada Massó. Iconos: [Iconsax](https://iconsax-react.pages.dev/) mediante `iconsax-react` (MIT).

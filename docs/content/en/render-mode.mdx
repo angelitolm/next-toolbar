@@ -1,0 +1,76 @@
+The render-mode badge answers one question: *will this route be static or rendered on every request in production?* In `next dev` every request renders on demand, so the answer has to be inferred. This page explains how.
+
+## The values
+
+| Badge | Meaning |
+|---|---|
+| **Static** | Next saw nothing that forces request-time rendering. |
+| **Dynamic** | The route uses a request API, `force-dynamic`, or a fetch that opts out of caching. |
+| **Static?** | Next says static, but the route has a dynamic segment (`[slug]`). It's only static in production if `generateStaticParams` returns those params. |
+| **Rendering…** | The route is rendering right now; the verdict arrives when it finishes. |
+| **?** | Unknown: not connected to the dev server, an error response, or Cache Components enabled. |
+
+## How Next decides in dev
+
+Next's dev server tracks, for every rendered path, whether it's static, and sends that to the browser over its HMR socket (it's what powers Next's own "Static route" indicator). The rule, in `next/dist/server/app-render/app-render.js`, is:
+
+```js
+const isStatic = !requestStore.usedDynamic && !workStore.forceDynamic
+```
+
+- `usedDynamic` becomes true when the page reads a **request API**: `headers()`, `cookies()`, `searchParams`, `connection()`, `draftMode()`…
+- `forceDynamic` is `export const dynamic = 'force-dynamic'`.
+
+## Where dev gets it wrong
+
+`next build` knows more than `next dev`. Two common cases came out of testing on Next 16.3.6:
+
+| Route | Next in dev | NextToolbar | `next build` |
+|---|---|---|---|
+| Uses `headers()` | Dynamic | Dynamic | ƒ Dynamic |
+| `fetch(url, { cache: 'no-store' })` | **Static** | **Dynamic** | ƒ Dynamic |
+| `/blog/[slug]` without `generateStaticParams` | **Static** | **Static?** | ƒ Dynamic |
+| `export const revalidate = 60` | Static | Static | ○ ISR, 1 min |
+
+### no-store fetches
+
+A `no-store` fetch only marks the route dynamic when Next is doing **static generation** (the code in `patch-fetch.js` is guarded by `workStore.isStaticGeneration`). In dev that never happens, so Next reports Static.
+
+NextToolbar corrects it with [request insights](./fetch-cache): if any fetch of the request was skipped for one of these reasons, the badge becomes **Dynamic** and the panel shows which fetch caused it:
+
+| Cache reason | From |
+|---|---|
+| `cache: no-store`, `cache: no-cache` | The fetch options |
+| `revalidate: 0` | `next: { revalidate: 0 }` or a segment `revalidate = 0` |
+| `fetchCache = force-no-store`, `only-no-store`, `default-no-store` | Segment config |
+| `noStore call` | `unstable_noStore()` / `noStore()` |
+
+Not included on purpose:
+
+- `auto no cache`: fetches with `POST` or `Authorization`/`Cookie` headers aren't cached but don't make the route dynamic in `next build`.
+- `cache-control: no-cache (hard refresh)`: the browser asked for fresh data; it says nothing about the route.
+
+<Callout type="note">
+  This correction needs Next 16 with `experimental.requestInsights`. On Next 15 the badge shows what Next reports.
+</Callout>
+
+### Dynamic segments
+
+A route like `/blog/[slug]` is rendered on demand in production unless `generateStaticParams` lists the params (then it's prerendered, ● SSG). The browser can't know whether that function exists, so NextToolbar shows **Static?** with an explanation instead of claiming either.
+
+### SSG vs ISR
+
+Dev has no cache, so a page with `revalidate = 60` looks exactly like a fully static one. Both show **Static**.
+
+## Error responses
+
+404 and 500 responses show `?`: Next marks error and not-found pages as static in its dev data, which is noise.
+
+## Next 15 and Cache Components
+
+- **Next 15** only ever sends `true` for static paths; dynamic paths are simply absent. Once the page's response has arrived, NextToolbar treats "absent" as Dynamic.
+- **Cache Components** (Next 16) make pages partially static; Next doesn't send static/dynamic data for them, so the badge shows `?`.
+
+<Callout type="tip" title="The source of truth">
+  For the real answer, run `next build`: its route table marks each route ○ Static, ● SSG or ƒ Dynamic, with revalidation times for ISR.
+</Callout>

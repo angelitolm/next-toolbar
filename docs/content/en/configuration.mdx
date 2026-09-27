@@ -1,0 +1,61 @@
+NextToolbar needs no configuration to work. This page lists what you *can* configure, in the component and in `next.config`.
+
+## Props
+
+```tsx
+<NextToolbar theme="system" />
+```
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `theme` | `'system' \| 'light' \| 'dark'` | `'system'` | Initial theme. `system` follows the OS preference. The theme button in the toolbar overrides it and remembers the choice per browser. |
+
+The package also exports the types `NextToolbarProps` and `Theme`.
+
+## `next.config` options
+
+| Option | Recommended | Why |
+|---|---|---|
+| `experimental.requestInsights` | `true` (Next 16) | Unlocks server timing, fetches with cache outcome, server errors, exact route patterns, the no-store render-mode correction and the profiler. |
+| `devIndicators` | `{ position: 'top-right' }` or `false` | Next's indicator sits bottom-left by default, on top of the toolbar's logo. |
+
+```ts title="next.config.ts"
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  devIndicators: { position: 'top-right' },
+  experimental: { requestInsights: true },
+}
+
+export default nextConfig
+```
+
+<Callout type="note">
+  `requestInsights` only exists in Next 16. Next 15 ignores it, so the same config works on both.
+</Callout>
+
+## `basePath` and `assetPrefix`
+
+Both work without extra configuration:
+
+- The toolbar finds the dev server's socket the same way Next's own client does: from the path of Next's scripts (everything before `/_next/`). That covers `basePath`, and `assetPrefix` including a CDN URL.
+- Next writes `basePath` into the toolbar's code at build time (`process.env.__NEXT_ROUTER_BASEPATH`), so it can match URLs that include it (`/docs/blog/hello`) with the paths Next reports without it (`/blog/hello`).
+
+## Persisted preferences
+
+The toolbar stores two small preferences in the browser's `localStorage`, per origin:
+
+| Key | Values | Set by |
+|---|---|---|
+| `next-toolbar:collapsed` | `'1'` or `'0'` | Minimizing / expanding the toolbar |
+| `next-toolbar:theme` | `'system'`, `'light'`, `'dark'` | The theme button |
+
+Clear them to go back to the defaults. If `localStorage` is unavailable (private mode, blocked storage), the toolbar still works and simply doesn't remember.
+
+## Error boundary
+
+Not a toolbar option, but worth repeating: add `app/error.tsx` so a render error doesn't take the root layout, and the toolbar, down with it. See [Getting started](./getting-started#4-add-an-error-boundary).
+
+## Production
+
+There is nothing to switch off. The toolbar renders `null` whenever `NODE_ENV` isn't `development`.

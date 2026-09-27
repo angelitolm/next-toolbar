@@ -1,0 +1,56 @@
+The profiler is the toolbar's detail view. When the bar tells you something failed or took too long, this is where you find out why: a list of the requests the dev server handled, and everything NextToolbar knows about the one you select.
+
+<Callout type="note" title="Requires request insights">
+  The profiler needs Next.js 16 with `experimental.requestInsights: true`. Without it, it opens with a hint explaining how to enable it. See [Configuration](./configuration).
+</Callout>
+
+## Opening it
+
+- Click the **request id** in the toolbar (`# f9b45c`). The profiler opens on the current page's request.
+- Click a **server error** in the errors panel. The profiler opens on that request with the error expanded.
+- Press <kbd>Esc</kbd> or the close button to close it.
+
+## Request list
+
+The left column lists every captured request, newest first, up to the last **100**:
+
+- a status pill (gradient for 2xx, amber 3xx, red 4xx/5xx, `ERR` when the request failed without a status);
+- the route pattern;
+- an **RSC** tag for React Server Component payloads, i.e. client navigations and prefetches;
+- the server duration.
+
+Route handlers (for example `/api/time`) show up too, so you can see the calls a page made to your own API.
+
+The header shows the cache outcome of **all** captured fetches, e.g. `HIT 6 · HMR 3 · SKIP 5 · 100% hit`.
+
+## Request detail
+
+### Summary
+
+URL, route, type (document or RSC payload), HTTP status and outcome, duration, start time and request id.
+
+### Errors
+
+Only the spans where an error **originated** are listed, not every parent it bubbled through. When some of them carry a message and others are bare wrappers, only the ones with a message are shown.
+
+Each error expands to show its type, message, span, when it happened (`+25 ms · took 15 ms`) and every attribute Next attached to the span. The first one opens automatically.
+
+### Fetches
+
+Every server `fetch` of the request with method, URL, HTTP status, [cache outcome](./fetch-cache) with its reason, and duration.
+
+### Timeline
+
+A waterfall of the spans Next recorded for the request: resolving the page, building the component tree, rendering, streaming, each fetch… Rows are nested by parent span and scaled to the request's duration. Spans in error are red.
+
+## Clear
+
+After a while the list mixes requests from many pages, reloads and tabs. **Clear** (top right) empties it:
+
+- it removes every captured request **except the current page's**, so the toolbar keeps its server time, fetches and route;
+- it also clears the **client errors** of the current page;
+- cleared requests don't come back: Next re-sends its whole snapshot of requests when the socket reconnects or the app recompiles, and the toolbar ignores anything older than the moment you cleared.
+
+<Callout type="note">
+  "Older than" compares the dev server's clock with the browser's. On your own machine they're the same clock; with a remote dev server whose clock is off, a few old requests could reappear.
+</Callout>

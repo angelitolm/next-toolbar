@@ -1,0 +1,75 @@
+NextToolbar es un único client component sin dependencias en tiempo de ejecución aparte de React y Next. Recoge datos de tres sitios y los renderiza en un Shadow DOM aislado.
+
+## Flujo de datos
+
+```
+             ┌──────────────────────────── next dev ─────────────────────────────┐
+             │  app render ──► static/dynamic per path ─┐                        │
+             │  OpenTelemetry spans + fetch metrics ───┐ │                        │
+             │                                         ▼ ▼                        │
+             │                              HMR WebSocket (/_next/hmr)            │
+             └───────────────────────────────────────────┬────────────────────────┘
+                                                         │ isrManifest
+                                                         │ requestInsightsUpdate / sync
+   Browser                                               ▼
+   ┌──────────────────────┐      ┌───────────────────────────────────────────────┐
+   │ Performance API      │──►   │ <NextToolbar />                               │
+   │ (navigation, _rsc)   │      │  useTimings · useHmr · useClientErrors        │
+   ├──────────────────────┤      │        │                                      │
+   │ window error events  │──►   │        ▼  core.ts (pure: parse, match, infer) │
+   ├──────────────────────┤      │  Shadow DOM ◄── toolbar · panels · profiler   │
+   │ usePathname/Params   │──►   └───────────────────────────────────────────────┘
+   └──────────────────────┘
+```
+
+## Fuentes de datos
+
+### 1. El navegador
+
+- **Navigation Timing** da el estado y el TTFB de la carga completa de la página.
+- **Resource Timing** da el estado y la duración de la petición `?_rsc=` que hay detrás de cada navegación en el cliente.
+- Los eventos **`error` / `unhandledrejection`** dan los errores del cliente, con su stack.
+- **`usePathname()` / `useParams()`** dan la ruta y los params actuales.
+
+### 2. El HMR socket de desarrollo de Next
+
+La barra abre un **segundo** WebSocket al mismo endpoint que usa el propio cliente de Next. Nunca envía nada; solo escucha:
+
+- `isrManifest`: un mapa de ruta → estática, que es lo que usa el propio indicador "Static route" de Next;
+- `requestInsightsUpdate`: una petición a medida que avanza (Next 16 con `requestInsights`);
+- `sync`: una instantánea de las peticiones recientes, enviada al conectar y después de cada recompilación.
+
+Un cliente que se conecta sin el id de petición por página de Next cuenta como cliente "legacy", y eso es lo que hace que Next le envíe los datos estáticos. Cuando el servidor de desarrollo se reinicia, la barra se reconecta cada 2 s.
+
+### 3. Request insights
+
+Con `experimental.requestInsights`, Next 16 registra cada petición como spans al estilo de OpenTelemetry más métricas de fetch y los envía por el socket. De ahí salen la ruta exacta, el tiempo del servidor, los fetches, los resultados de caché y los errores del servidor.
+
+## Render
+
+- `<NextToolbar>` devuelve `null` a menos que `NODE_ENV` sea `development`.
+- Crea un elemento `<next-toolbar>` al final de `<body>`, le adjunta un **Shadow DOM abierto** y renderiza dentro con un portal de React. La hoja de estilos vive dentro del shadow root, así que el CSS de ninguno de los dos lados se filtra al otro.
+- El tema es un atributo `data-theme` en el elemento host; sin atributo significa "seguir el sistema operativo".
+
+## `basePath` y `assetPrefix`
+
+- La URL del socket se construye igual que lo hace el cliente de Next: el host actual, más el prefijo de ruta tomado de las URLs de los scripts de Next (todo lo que hay antes de `/_next/`), más la ruta del socket para esa versión de Next.
+- El bundler de Next incrusta `process.env.__NEXT_ROUTER_BASEPATH` en el código del paquete. La barra lo elimina de las URLs del navegador para que coincidan con las rutas que reporta Next.
+
+## Mapa del código
+
+| Archivo | Responsabilidad |
+|---|---|
+| `src/core.ts` | Lógica pura, sin React ni DOM: parseo de mensajes, inferencia del modo de render, patrones de ruta, cascada de spans, origen de los errores, estadísticas de caché, helpers de basePath. Cubierto por `core.test.ts`. |
+| `src/NextToolbar.tsx` | El componente, la barra, sus paneles y los hooks: `useShadowRoot`, `useTimings`, `useHmr`, `useClientErrors`. |
+| `src/Profiler.tsx` | El panel del profiler, el resumen de caché y las píldoras. |
+| `src/styles.ts` | Toda la hoja de estilos como string, con tokens claros y oscuros. |
+| `src/icons.tsx` | Iconos de Iconsax (variante Broken) incrustados como SVG. |
+| `src/Logo.tsx` | La marca de NextToolbar. |
+| `src/index.ts` | Exportaciones públicas: `NextToolbar`, `NextToolbarProps`, `Theme`. |
+
+## Principios
+
+- **Cero dependencias** aparte de las peer dependencies `next`, `react` y `react-dom`.
+- **Degradar, no romper**: si Next cambia un mensaje interno, el valor afectado muestra `?`.
+- **Núcleo puro**: todo lo que tenga lógica que merezca probarse vive en `core.ts` con un test al lado.

@@ -1,0 +1,58 @@
+## Feature matrix
+
+| Feature | Next 15 | Next 16 | Next 16 + `requestInsights` |
+|---|:---:|:---:|:---:|
+| HTTP status (load and client navigation) | ✓ | ✓ | ✓ |
+| Route pattern | heuristic | heuristic | exact |
+| Render mode (Static / Dynamic / Static?) | ✓ | ✓ | ✓ |
+| no-store correction of render mode | — | — | ✓ |
+| TTFB / navigation time | ✓ | ✓ | ✓ |
+| Server render time | — | — | ✓ |
+| Server fetches and cache outcome | — | — | ✓ |
+| Server errors | — | — | ✓ |
+| Client errors | ✓ | ✓ | ✓ |
+| Request profiler | — | — | ✓ |
+| `basePath` / `assetPrefix` | ✓ | ✓ | ✓ |
+
+"Heuristic" route patterns are rebuilt from `usePathname()` and `useParams()`. They're right in almost every case; a param whose value equals a later static segment (e.g. `/blog/blog`) can be mislabeled.
+
+## Tested versions
+
+| Version | How |
+|---|---|
+| Next **16.3.6** | Full test in the browser |
+| Next **15.5.26** | Full test in the browser |
+| Next **15.0.8** | Reviewed from source (message format), not run |
+
+React 19 is required (it's what the App Router uses on Next 15+).
+
+## What differs between Next versions
+
+NextToolbar reads Next's internal dev HMR socket, whose shape changed between versions. The toolbar handles all of them:
+
+| | 15.0 | 15.5 | 16.x |
+|---|---|---|---|
+| Socket path | `/_next/webpack-hmr` | `/_next/webpack-hmr` | `/_next/hmr` |
+| Message field | `action` | `action` | `type` |
+| Static data message | `appIsrManifest` | `isrManifest` | `isrManifest` |
+| Dynamic routes in it | absent | absent | `false` |
+| Request insights | — | — | `requestInsightsUpdate` |
+
+<Callout type="warning" title="Internal API">
+  These are internal, undocumented Next.js messages. A future Next version can change them; when that happens the affected segments show `?` instead of breaking the page.
+</Callout>
+
+## Cache Components
+
+With `cacheComponents` enabled (Next 16), Next doesn't send static/dynamic data, so the render-mode badge shows `?`. Everything else works.
+
+## Browsers
+
+| Browser | Notes |
+|---|---|
+| Chrome, Edge, Firefox | Full support |
+| Safari | No `responseStatus` in the Performance API, so the status shows `—`. Everything else works. |
+
+## TypeScript
+
+Next 15 can't load `next.config.ts` with **TypeScript 7** (the native compiler has no JavaScript API). Use TypeScript 6 with Next 15, or Next 16.2.11+ for TypeScript 7. This affects your app, not the toolbar.

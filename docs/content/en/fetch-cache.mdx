@@ -1,0 +1,61 @@
+With request insights enabled, NextToolbar shows every `fetch` your server components made and what Next's **data cache** did with it.
+
+## Outcomes
+
+These are the values Next records internally (`next/dist/server/lib/patch-fetch.js`):
+
+| Outcome | Meaning |
+|---|---|
+| **HIT** | Served from the data cache. |
+| **HMR** | Dev only: reused across a hot reload so editing code doesn't refetch everything. |
+| **MISS** | Cacheable; fetched from the origin and stored. |
+| **SKIP** | Not cacheable: `no-store`, `revalidate: 0`, a hard refresh… |
+| **?** | No cache information: the fetch failed, or the Next version doesn't report it. |
+
+## Hit rate
+
+```
+hit rate = (HIT + HMR) / (HIT + HMR + MISS)
+```
+
+`SKIP` and unknown fetches are left out: they were never meant to be cached, so they shouldn't pull the rate down. If nothing was cacheable, no rate is shown.
+
+## Cache reasons
+
+Next attaches a reason to each outcome. The profiler shows it next to the pill:
+
+| Reason | What caused it |
+|---|---|
+| `revalidate: never` | `cache: 'force-cache'` (Next stores it as an "infinite" revalidate, 4294967294 s) |
+| `revalidate: 30` | `next: { revalidate: 30 }` or the segment's `revalidate` |
+| `cache: no-store` / `cache: no-cache` | The fetch options |
+| `fetchCache = …` | The segment's `fetchCache` config |
+| `noStore call` | `noStore()` was called before the fetch |
+| `auto cache` / `auto no cache` | No explicit option: Next decided (e.g. `POST` or auth headers → no cache) |
+| `cache-control: no-cache (hard refresh)` | The browser did a hard reload; Next skipped the cache on purpose |
+
+## Where you see it
+
+- **Toolbar**: `fetch 3 · 67% hit` for the current page.
+- **Fetch panel** (hover): outcome chips (`HIT 2 · SKIP 1`) and each fetch with its outcome and time.
+- **Profiler**: a table per request with outcome and reason, and the totals of every captured request in the header.
+
+## A worked example
+
+The playground has a `/cache` page with three fetches to a local API:
+
+```tsx
+fetch(`${api}?forced`, { cache: 'force-cache' })
+fetch(`${api}?revalidated`, { next: { revalidate: 30 } })
+fetch(`${api}?fresh`, { cache: 'no-store' })
+```
+
+| Load | forced | revalidated | fresh | Rate |
+|---|---|---|---|---|
+| Hard refresh (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>) | SKIP (hard refresh) | SKIP (hard refresh) | SKIP (no-store) | — |
+| Client navigation | HIT (never) | HIT (30) | SKIP (no-store) | 100% |
+| After editing a file | HMR | HMR | SKIP | 100% |
+
+<Callout type="tip">
+  The `no-store` fetch is also why this page shows **Dynamic** even though Next's dev data says static. See [Render mode](./render-mode#no-store-fetches).
+</Callout>

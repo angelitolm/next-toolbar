@@ -1,0 +1,79 @@
+<p align="center"><img src="./packages/next-toolbar/logo.svg" width="96" height="96" alt="NextToolbar logo"></p>
+
+<h1 align="center">NextToolbar</h1>
+
+<p align="center">A floating debug toolbar for the Next.js App Router: the answers you dig for in DevTools and the terminal, at a glance.</p>
+
+---
+
+Building a Next.js app means asking the same questions all day: did this page return a 200? Is this route static or dynamic? Why did it take 800 ms? Did that fetch hit the cache? Answering them usually means juggling the Network tab, the terminal and Next's own indicator.
+
+NextToolbar puts the answers in one place. While you run `next dev`, it sits at the bottom of your app and tells you what just happened on the page you're looking at:
+
+- **HTTP status** of full loads and client navigations
+- **Route pattern** that matched (`/blog/[slug]`)
+- **Render mode**: Static, Dynamic or `Static?`, correcting the cases where Next's dev indicator is wrong
+- **Timing**: server render time, TTFB, navigation time
+- **Server fetches** with their data-cache outcome (HIT / HMR / MISS / SKIP) and hit rate
+- **Errors** on the client (with stack) and on the server (with the span where it started)
+- **Request profiler**: every request with summary, errors, fetches and a render timeline
+- Light and dark themes, minimizes to a circle, zero runtime dependencies
+
+Dev only: in production the component renders nothing.
+
+## Quick start
+
+```bash
+pnpm add -D @angelitolm/next-toolbar
+```
+
+```tsx
+// app/layout.tsx
+import { NextToolbar } from '@angelitolm/next-toolbar'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <NextToolbar />
+      </body>
+    </html>
+  )
+}
+```
+
+For the full feature set, use Next.js 16 and enable request insights:
+
+```ts
+// next.config.ts
+const nextConfig = {
+  devIndicators: { position: 'top-right' },
+  experimental: { requestInsights: true },
+}
+```
+
+Requires Next.js 15+ (App Router) and React 19.
+
+## Documentation
+
+The docs are a Next.js site in [`docs/`](./docs), in English and Spanish. Read the pages directly in [`docs/content/en`](./docs/content/en) ([español](./docs/content/es)), or run the site locally:
+
+```bash
+pnpm install
+pnpm --filter docs dev   # http://localhost:3200
+```
+
+## Repository
+
+| Path | What |
+|---|---|
+| [`packages/next-toolbar`](./packages/next-toolbar) | The npm package `@angelitolm/next-toolbar` |
+| [`playground`](./playground) | A Next app with one route per scenario, for development |
+| [`docs`](./docs) | The documentation site |
+
+See [Contributing](./docs/content/en/contributing.mdx) to work on it.
+
+## License
+
+[MIT](./LICENSE) © 2023–2026 Angel Labrada Massó

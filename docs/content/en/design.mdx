@@ -1,0 +1,75 @@
+NextToolbar should feel like part of a modern app, not a debug panel from 2010: a floating surface, soft shadows, moderate radii and one strong brand color used sparingly.
+
+## The primary gradient
+
+A lime → aqua gradient is the brand color. It marks "good" and "the thing to look at":
+
+```css
+--nt-from: #c6ff5c;
+--nt-to:   #5ef5e0;
+--nt-primary: linear-gradient(90deg, var(--nt-from), var(--nt-to));
+```
+
+It's used for the 2xx status chip (with a soft glow), the status dot of the minimized circle, cache **HIT** pills, profiler status pills, timeline bars, the selected request and the logo's diagonal. Text on it is always near-black (`#0b0f0c`).
+
+Errors stay red and warnings amber, so the gradient never has to mean two things.
+
+## Surfaces
+
+| Token | Dark | Light |
+|---|---|---|
+| Surface | `#38383b → #1f1f21` (vertical gradient) | `#ffffff → #f3f4f6` |
+| Text | `#f4f4f5` | `#18181b` |
+| Dim text | `#9d9da3` | `#6b6b76` |
+| Border | white 9% | black 10% |
+| Error | `#ff6b6b` | `#d93636` |
+| Warning | `#ffb547` | `#b86e00` |
+
+Surfaces carry a large soft shadow plus a 1 px top highlight, which is what makes the bar look like it floats.
+
+## Shape
+
+| Element | Radius |
+|---|---|
+| Bar | 14 px |
+| Segments, icon buttons | 9 px |
+| Chips and badges | 5–8 px |
+| Hover panels | 12 px |
+| Profiler | 16 px |
+| Minimized launcher | circle |
+
+## Themes
+
+The toolbar ships both themes as CSS custom properties on the Shadow DOM host. Dark is the default; light applies with `data-theme="light"`, or when the OS prefers light and no theme is forced.
+
+The logo always sits on a dark tile, in both themes: the lime end of the gradient disappears on white.
+
+## Icons
+
+All icons come from [Iconsax](https://iconsax-react.pages.dev/), **Broken** variant.
+
+| Where | Icon |
+|---|---|
+| Request id | `Hashtag` |
+| Route | `Routing2` |
+| Timing | `Timer1` |
+| Fetches | `ArrangeHorizontal` |
+| Errors | `Danger` |
+| Next version | `Code` |
+| Theme | `Monitor`, `Sun1`, `Moon` |
+| Minimize / close | `CloseCircle` |
+| Clear | `Trash` |
+| Details, expand | `ArrowRight`, `ArrowRight2` |
+
+The package inlines the SVGs of these icons (`src/icons.tsx`) instead of depending on an icon library. These docs use `iconsax-reactjs` directly.
+
+## The logo
+
+An **N** whose two verticals are rounded bars and whose diagonal is the glowing primary gradient: the same bar the toolbar draws for a healthy request.
+
+- `packages/next-toolbar/logo.svg`: standalone mark on a dark circle, for READMEs and npm.
+- `src/Logo.tsx`: the mark inside the toolbar; its verticals use `currentColor`.
+
+## Motion
+
+The bar grows out of the launcher's position (scale from the left), panels rise 6 px as they appear, and the launcher scales up slightly on hover. All motion is disabled with `prefers-reduced-motion`.

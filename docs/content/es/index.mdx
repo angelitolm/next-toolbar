@@ -1,0 +1,69 @@
+NextToolbar es una barra de depuración flotante para el **App Router de Next.js**. Se queda en la parte inferior de tu app mientras ejecutas `next dev` y te dice, de un vistazo, qué acaba de pasar en la página que estás viendo.
+
+## Por qué
+
+Desarrollar una app con Next.js es hacerte las mismas preguntas todo el día:
+
+- ¿Esta página devolvió un 200, o algo falló en el servidor?
+- ¿Esta ruta es estática, o se va a renderizar en cada petición en producción?
+- ¿Por qué tardó 800 ms? ¿Fue el render o un fetch lento?
+- ¿Ese `fetch` salió de la caché, o fue a la red cada vez?
+
+Las respuestas existen, pero están repartidas: la pestaña Network, la terminal donde corre `next dev`, el propio indicador de Next y, a veces, un `next build` solo para salir de dudas. Cada vez que cambias de sitio pierdes el hilo.
+
+NextToolbar las pone donde ya estás mirando: en la propia página, actualizadas en cada navegación.
+
+```
+┌───────────────────────────────────────────────────────────────────────────────────────────────┐
+│ N │ 200  # f9b45c  ⌥ /blog/[slug]  Static? │ ⏱ 39 ms server 46 ms nav  ⇄ fetch 3  ⚠ errors 0 │ … Next 16.3.6  ◐  ⊗ │
+└───────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Qué muestra
+
+- **El estado HTTP** de la página, tanto en cargas completas como en navegaciones en el cliente.
+- **La ruta que coincidió**, como patrón: `/blog/[slug]`, no solo `/blog/hello`.
+- **El modo de render**: si la ruta es Static o Dynamic, incluidos los casos en los que el propio indicador de desarrollo de Next se equivoca.
+- **Tiempos**: tiempo de render en el servidor, tiempo hasta el primer byte y tiempo de navegación en el cliente.
+- **Las llamadas `fetch` del servidor** con el resultado de la caché de datos (HIT, MISS, SKIP…) y un porcentaje de acierto.
+- **Errores** en el cliente y en el servidor, con stack traces y el span donde empezó un error del servidor.
+- **Un profiler de peticiones** con cada petición que atendió el servidor de desarrollo: resumen, errores, fetches y un timeline del render.
+- **Las versiones** de Next.js y React.
+
+Es **solo para desarrollo**: en un build de producción el componente no renderiza nada.
+
+## Vistazo rápido
+
+```tsx title="app/layout.tsx"
+import { NextToolbar } from '@angelitolm/next-toolbar'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <NextToolbar />
+      </body>
+    </html>
+  )
+}
+```
+
+<Callout type="tip" title="La estás viendo">
+  Esta documentación funciona con NextToolbar. Arráncala en local con `pnpm --filter docs dev` y la barra de abajo es la de verdad.
+</Callout>
+
+## Requisitos
+
+| | Mínimo | Todas las funciones |
+|---|---|---|
+| Next.js | 15, App Router | 16 con `experimental.requestInsights` |
+| React | 19 | 19 |
+
+Con Next 15 tienes estado, ruta, modo de render, tiempos del cliente, errores del cliente y versiones. Los tiempos del servidor, los fetches, la corrección del modo de render por no-store y el profiler necesitan las request insights de Next 16. Consulta [Compatibilidad](./compatibility).
+
+## Por dónde seguir
+
+- [Empezar](./getting-started): instálala y añádela a tu layout en dos minutos.
+- [La barra](./toolbar): qué significa cada segmento.
+- [Modo de render](./render-mode): por qué "Static" en desarrollo no siempre significa estático en producción.

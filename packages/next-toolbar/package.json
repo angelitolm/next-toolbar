@@ -1,0 +1,60 @@
+{
+  "name": "@angelitolm/next-toolbar",
+  "version": "0.1.0",
+  "description": "Floating debug toolbar for the Next.js App Router (dev only): status, route, render mode, timings, fetch cache and a request profiler",
+  "keywords": [
+    "nextjs",
+    "next",
+    "debug",
+    "toolbar",
+    "devtools",
+    "profiler",
+    "app-router",
+    "react"
+  ],
+  "author": "Angel Labrada Massó",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/angelitolm/next-toolbar.git",
+    "directory": "packages/next-toolbar"
+  },
+  "homepage": "https://github.com/angelitolm/next-toolbar/tree/main/docs",
+  "bugs": "https://github.com/angelitolm/next-toolbar/issues",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "logo.svg"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "pnpm build --watch",
+    "test": "node --test src/core.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19.3.0",
+    "next": "16.3.6",
+    "react": "^19",
+    "react-dom": "^19",
+    "tsup": "^8",
+    "typescript": "^5"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,87 @@
+## Repository layout
+
+```
+next-toolbar/
+├── packages/next-toolbar/   the npm package (@angelitolm/next-toolbar)
+│   ├── src/                 component, core logic, styles, icons
+│   ├── logo.svg
+│   └── README.md            the README published to npm
+├── playground/              Next app with one route per scenario
+├── docs/                    this documentation site (Next + MDX, en/es)
+├── pnpm-workspace.yaml
+└── LICENSE
+```
+
+## Prerequisites
+
+- Node.js **22.18+** (tests run TypeScript directly with Node's type stripping)
+- pnpm **11**
+
+```bash
+pnpm install
+```
+
+## Scripts
+
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Builds the package in watch mode and starts the playground (port 3100) and the docs (port 3200) |
+| `pnpm build` | Builds the package with tsup |
+| `pnpm test` | Runs the package's unit tests |
+| `pnpm --filter @angelitolm/next-toolbar typecheck` | Type-checks the package |
+| `pnpm --filter docs test` | Checks that both languages have the same messages and pages |
+
+## The playground
+
+Every route exercises one scenario:
+
+| Route | Scenario |
+|---|---|
+| `/` | Static page |
+| `/dynamic` | Uses `headers()`: Dynamic |
+| `/isr` | `revalidate = 60` and an external fetch (fails offline: a server error) |
+| `/cache` | `force-cache`, `revalidate: 30` and `no-store` fetches to a local API |
+| `/blog/[slug]` | Dynamic segment without `generateStaticParams`: `Static?` |
+| `/boom` | Throws while rendering: 500 and a server error (kept visible by `app/error.tsx`) |
+| `/nope` | 404 |
+| `/client-error` | Button that throws in the browser |
+| `/api/time` | Route handler used by `/cache` |
+
+Its `next.config.ts` enables `requestInsights` and moves Next's indicator to the top right.
+
+## Code conventions
+
+- Logic worth testing goes in `src/core.ts` as pure functions, with a test in `core.test.ts`. The component files stay thin.
+- No new runtime dependencies: the package only has peer dependencies.
+- Anything that reads Next internals must degrade to `?` if the data is missing.
+- Match the surrounding style: TypeScript, single quotes, no semicolons.
+
+## The docs site
+
+The docs are a Next.js app with MDX, next-intl (English and Spanish) and Tailwind.
+
+| Path | Purpose |
+|---|---|
+| `content/<locale>/<slug>.mdx` | Page content (no `#` title; it comes from the messages) |
+| `messages/<locale>.json` | UI strings, section names, page titles and descriptions |
+| `lib/pages.ts` | Page order, sections, icons and the MDX import table |
+| `mdx-components.tsx` | `<Callout>` and locale-aware links |
+
+To add a page:
+
+1. Add the slug to a section in `lib/pages.ts`, with an icon and its two imports.
+2. Create `content/en/<slug>.mdx` and `content/es/<slug>.mdx`.
+3. Add `pages.<slug>.title` and `description` to both message files.
+4. Run `pnpm --filter docs test`.
+
+Link between pages with `./slug` (and `./` for the home page); the links keep the reader's language. Use `<Callout type="note | tip | warning">` for asides.
+
+## Releasing
+
+1. Bump `version` in `packages/next-toolbar/package.json`.
+2. `pnpm build && pnpm test`
+3. From `packages/next-toolbar`: `npm publish`. The package is scoped and `publishConfig.access` is `public`.
+
+## License
+
+MIT, © 2023–2026 Angel Labrada Massó. Icons: [Iconsax](https://iconsax-react.pages.dev/) via `iconsax-react` (MIT).

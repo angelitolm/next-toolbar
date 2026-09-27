@@ -1,0 +1,80 @@
+## 1. Instala
+
+```bash
+pnpm add -D @angelitolm/next-toolbar
+```
+
+npm y yarn funcionan igual (`npm i -D …`, `yarn add -D …`). Instálala como dependencia de desarrollo: nunca se renderiza en producción.
+
+## 2. Añádela al layout raíz
+
+```tsx title="app/layout.tsx"
+import { NextToolbar } from '@angelitolm/next-toolbar'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <NextToolbar />
+      </body>
+    </html>
+  )
+}
+```
+
+`NextToolbar` es un client component (el paquete incluye la directiva `'use client'`), así que puedes renderizarlo desde un layout que sea Server Component sin envolverlo.
+
+Ponla en el layout **raíz** para que sobreviva a la navegación entre rutas y mantenga su conexión con el servidor de desarrollo.
+
+## 3. `next.config.ts` recomendado
+
+```ts title="next.config.ts"
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  // Next's own dev indicator sits bottom-left by default and overlaps the toolbar.
+  devIndicators: { position: 'top-right' },
+  // Next 16 only: server timing, fetches, exact route patterns and the profiler.
+  experimental: { requestInsights: true },
+}
+
+export default nextConfig
+```
+
+Las dos opciones son opcionales:
+
+- Sin `devIndicators.position`, el indicador redondo "N" de Next queda encima del borde izquierdo de la barra. También puedes desactivarlo con `devIndicators: false`.
+- Sin `requestInsights` (o en Next 15) la barra sigue mostrando estado, ruta, modo de render, tiempos del cliente, errores del cliente y versiones, pero no los tiempos del servidor, los fetches, la corrección del modo de render por no-store ni el profiler. Consulta [Compatibilidad](./compatibility).
+
+## 4. Añade un error boundary
+
+<Callout type="warning" title="Recomendado">
+  Si una página lanza un error al renderizar y no hay `app/error.tsx`, Next sustituye todo el layout raíz por su fallback, y la barra desaparece con él.
+</Callout>
+
+Un boundary mínimo mantiene el layout, y por tanto la barra, en pantalla:
+
+```tsx title="app/error.tsx"
+'use client'
+
+export default function Error({ error }: { error: Error }) {
+  return <h1>Something went wrong: {error.message}</h1>
+}
+```
+
+## 5. Ejecuta
+
+```bash
+pnpm dev
+```
+
+Abre cualquier página. La barra aparece como una franja a lo largo de la parte inferior de la ventana:
+
+- pasa el ratón por cualquier segmento para ver los detalles;
+- haz clic en el id de la petición (`# f9b45c`) para abrir el [profiler](./profiler);
+- haz clic en el logo o en el botón de cerrar para minimizarla a un círculo.
+
+## Producción
+
+No tienes que hacer nada. El componente comprueba `process.env.NODE_ENV !== 'development'` y devuelve `null`, así que no renderiza nada en producción y nunca abre una conexión. Como Next incrusta `NODE_ENV` en tiempo de build, el minificador también puede eliminar el código inalcanzable de la barra. No necesitas importarla de forma condicional.

@@ -1,0 +1,61 @@
+NextToolbar no necesita configuración para funcionar. Esta página enumera lo que *puedes* configurar, en el componente y en `next.config`.
+
+## Props
+
+```tsx
+<NextToolbar theme="system" />
+```
+
+| Prop | Tipo | Por defecto | Descripción |
+|---|---|---|---|
+| `theme` | `'system' \| 'light' \| 'dark'` | `'system'` | Tema inicial. `system` sigue la preferencia del sistema operativo. El botón de tema de la barra lo sobrescribe y recuerda la elección por navegador. |
+
+El paquete también exporta los tipos `NextToolbarProps` y `Theme`.
+
+## Opciones de `next.config`
+
+| Opción | Recomendado | Por qué |
+|---|---|---|
+| `experimental.requestInsights` | `true` (Next 16) | Activa los tiempos del servidor, los fetches con su resultado de caché, los errores del servidor, los patrones de ruta exactos, la corrección del modo de render por no-store y el profiler. |
+| `devIndicators` | `{ position: 'top-right' }` o `false` | El indicador de Next está abajo a la izquierda por defecto, encima del logo de la barra. |
+
+```ts title="next.config.ts"
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  devIndicators: { position: 'top-right' },
+  experimental: { requestInsights: true },
+}
+
+export default nextConfig
+```
+
+<Callout type="note">
+  `requestInsights` solo existe en Next 16. Next 15 lo ignora, así que la misma configuración funciona en ambos.
+</Callout>
+
+## `basePath` y `assetPrefix`
+
+Ambos funcionan sin configuración adicional:
+
+- La barra encuentra el socket del servidor de desarrollo igual que lo hace el propio cliente de Next: a partir de la ruta de los scripts de Next (todo lo que hay antes de `/_next/`). Eso cubre `basePath`, y `assetPrefix` incluida una URL de CDN.
+- Next escribe `basePath` en el código de la barra en tiempo de build (`process.env.__NEXT_ROUTER_BASEPATH`), para que pueda hacer coincidir las URLs que lo incluyen (`/docs/blog/hello`) con las rutas que Next reporta sin él (`/blog/hello`).
+
+## Preferencias guardadas
+
+La barra guarda dos pequeñas preferencias en el `localStorage` del navegador, por origen:
+
+| Clave | Valores | La establece |
+|---|---|---|
+| `next-toolbar:collapsed` | `'1'` o `'0'` | Minimizar / expandir la barra |
+| `next-toolbar:theme` | `'system'`, `'light'`, `'dark'` | El botón de tema |
+
+Bórralas para volver a los valores por defecto. Si `localStorage` no está disponible (modo privado, almacenamiento bloqueado), la barra sigue funcionando y simplemente no recuerda nada.
+
+## Error boundary
+
+No es una opción de la barra, pero vale la pena repetirlo: añade `app/error.tsx` para que un error de render no tumbe el layout raíz, y la barra con él. Consulta [Empezar](./getting-started#4-añade-un-error-boundary).
+
+## Producción
+
+No hay nada que desactivar. La barra renderiza `null` siempre que `NODE_ENV` no sea `development`.

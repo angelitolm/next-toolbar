@@ -1,0 +1,75 @@
+NextToolbar is one client component with no runtime dependencies besides React and Next. It gathers data from three places and renders it into an isolated Shadow DOM.
+
+## Data flow
+
+```
+             ┌──────────────────────────── next dev ─────────────────────────────┐
+             │  app render ──► static/dynamic per path ─┐                        │
+             │  OpenTelemetry spans + fetch metrics ───┐ │                        │
+             │                                         ▼ ▼                        │
+             │                              HMR WebSocket (/_next/hmr)            │
+             └───────────────────────────────────────────┬────────────────────────┘
+                                                         │ isrManifest
+                                                         │ requestInsightsUpdate / sync
+   Browser                                               ▼
+   ┌──────────────────────┐      ┌───────────────────────────────────────────────┐
+   │ Performance API      │──►   │ <NextToolbar />                               │
+   │ (navigation, _rsc)   │      │  useTimings · useHmr · useClientErrors        │
+   ├──────────────────────┤      │        │                                      │
+   │ window error events  │──►   │        ▼  core.ts (pure: parse, match, infer) │
+   ├──────────────────────┤      │  Shadow DOM ◄── toolbar · panels · profiler   │
+   │ usePathname/Params   │──►   └───────────────────────────────────────────────┘
+   └──────────────────────┘
+```
+
+## Data sources
+
+### 1. The browser
+
+- **Navigation Timing** gives the status and TTFB of the full page load.
+- **Resource Timing** gives the status and duration of the `?_rsc=` request behind each client navigation.
+- **`error` / `unhandledrejection`** events give client errors, with their stack.
+- **`usePathname()` / `useParams()`** give the current path and params.
+
+### 2. Next's dev HMR socket
+
+The toolbar opens a **second** WebSocket to the same endpoint Next's own client uses. It never sends anything; it only listens for:
+
+- `isrManifest`: a map of path → static, which is what Next's own "Static route" indicator uses;
+- `requestInsightsUpdate`: one request as it progresses (Next 16 with `requestInsights`);
+- `sync`: a snapshot of recent requests, sent on connect and after rebuilds.
+
+A client that connects without Next's per-page request id counts as a "legacy" client, which is what makes Next send it the static data. When the dev server restarts, the toolbar reconnects every 2 s.
+
+### 3. Request insights
+
+With `experimental.requestInsights`, Next 16 records each request as OpenTelemetry-style spans plus fetch metrics and pushes them over the socket. That's where the exact route, server time, fetches, cache outcomes and server errors come from.
+
+## Rendering
+
+- `<NextToolbar>` returns `null` unless `NODE_ENV` is `development`.
+- It creates a `<next-toolbar>` element at the end of `<body>`, attaches an **open Shadow DOM** and renders into it with a React portal. The stylesheet lives inside the shadow root, so neither side's CSS leaks into the other.
+- The theme is a `data-theme` attribute on the host element; no attribute means "follow the OS".
+
+## `basePath` and `assetPrefix`
+
+- The socket URL is built like Next's client does it: current host, plus the path prefix taken from Next's script URLs (everything before `/_next/`), plus the socket path for the Next version.
+- `process.env.__NEXT_ROUTER_BASEPATH` is inlined by Next's bundler into the package code. The toolbar strips it from browser URLs so they match the paths Next reports.
+
+## Source map
+
+| File | Responsibility |
+|---|---|
+| `src/core.ts` | Pure logic, no React or DOM: message parsing, render-mode inference, route patterns, span waterfall, error origins, cache stats, basePath helpers. Covered by `core.test.ts`. |
+| `src/NextToolbar.tsx` | The component, the bar, its panels and the hooks: `useShadowRoot`, `useTimings`, `useHmr`, `useClientErrors`. |
+| `src/Profiler.tsx` | The profiler panel, cache summary and pills. |
+| `src/styles.ts` | The whole stylesheet as a string, with light and dark tokens. |
+| `src/icons.tsx` | Iconsax icons (Broken variant) inlined as SVG. |
+| `src/Logo.tsx` | The NextToolbar mark. |
+| `src/index.ts` | Public exports: `NextToolbar`, `NextToolbarProps`, `Theme`. |
+
+## Principles
+
+- **Zero dependencies** beyond the peer dependencies `next`, `react` and `react-dom`.
+- **Degrade, don't break**: if Next changes an internal message, the affected value shows `?`.
+- **Pure core**: anything with logic worth testing lives in `core.ts` with a test next to it.

@@ -1,0 +1,63 @@
+## The toolbar disappears when a page throws
+
+Without `app/error.tsx`, an uncaught render error makes Next replace the whole root layout with its fallback page, toolbar included. Next's error overlay still shows. Add a boundary to keep the layout:
+
+```tsx title="app/error.tsx"
+'use client'
+
+export default function Error({ error }: { error: Error }) {
+  return <h1>Something went wrong: {error.message}</h1>
+}
+```
+
+## The render mode says Static but production is dynamic
+
+Dev can only see request APIs and `force-dynamic`. A `no-store` fetch or a dynamic segment without `generateStaticParams` looks static in dev. NextToolbar catches the no-store case with request insights and marks dynamic segments `Static?`. Run `next build` for the definitive answer. See [Render mode](./render-mode).
+
+## The render mode shows `?`
+
+One of:
+
+- the page returned 4xx/5xx (render mode isn't shown for error responses);
+- the toolbar isn't connected to the dev server: hover the Next version and check **HMR socket**;
+- your app uses **Cache Components**, for which Next doesn't send static/dynamic data.
+
+## The status shows `—`
+
+The browser doesn't expose `responseStatus` (Safari), or the page came from the browser's back/forward cache.
+
+## No server time, fetches or profiler
+
+You're on Next 15, or `experimental.requestInsights` isn't enabled in `next.config`. The time segment's panel shows a hint when this is the case. See [Configuration](./configuration).
+
+## Next's "N" indicator covers the toolbar
+
+Move it or turn it off:
+
+```ts
+devIndicators: { position: 'top-right' } // or: devIndicators: false
+```
+
+## The request list is too noisy
+
+It collects requests from every page, reload and tab, plus route handlers and prefetches. Use **Clear** in the profiler: it keeps only the current page's request. See [Profiler → Clear](./profiler#clear).
+
+## Cleared requests came back
+
+The toolbar hides requests that started before you cleared, comparing the dev server's clock with the browser's. With a remote dev server whose clock is behind, a few may reappear.
+
+## The route pattern is wrong on Next 15
+
+Without request insights the pattern is rebuilt from the URL and `useParams()`. A param whose value equals a static segment (`/blog/blog`) can be mislabeled. Next 16 with request insights gives the exact pattern.
+
+## Does it affect production?
+
+No. The component returns `null` unless `NODE_ENV` is `development`: no rendering, no socket, no listeners.
+
+## Does it work with `basePath`?
+
+Yes, with no configuration. See [Configuration → basePath](./configuration#basepath-and-assetprefix).
+
+## Does it work with the Pages Router?
+
+No. NextToolbar is built for the App Router (it relies on `next/navigation` hooks and RSC requests).

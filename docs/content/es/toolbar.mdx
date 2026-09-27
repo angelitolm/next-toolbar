@@ -1,0 +1,78 @@
+La barra es una franja de ancho completo que flota 16 px por encima de la parte inferior de la ventana. Cada segmento resume un aspecto de la **página actual**; pasa el ratón por encima (o enfócalo con <kbd>Tab</kbd>) para abrir un panel con los detalles.
+
+```
+ N │ 200  # f9b45c  ⌥ /blog/[slug]  Static? │ ⏱ 39 ms server 46 ms nav  ⇄ fetch 3  ⚠ errors 0 │ … ⌘ Next 16.3.6  ◐  ⊗
+ 1    2      3            4            5            6                     7          8            9          10  11
+```
+
+## Segmentos
+
+| # | Segmento | Qué muestra | Panel al pasar el ratón |
+|---|---|---|---|
+| 1 | **Logo** | La marca de NextToolbar. Haz clic para minimizar. | — |
+| 2 | **Estado** | Estado HTTP: chip con degradado para 2xx, ámbar para 3xx, rojo para 4xx/5xx, gris `—` cuando se desconoce | El estado y si vino de una petición de documento o de una navegación en el cliente (RSC) |
+| 3 | **Id de petición** | Los 6 primeros caracteres del id de la petición en el servidor, o `profiler` cuando las request insights están desactivadas | — Al hacer clic abre el [profiler](./profiler) en esta petición |
+| 4 | **Ruta** | El patrón de ruta que coincidió, p. ej. `/blog/[slug]` | Patrón, ruta real y cada valor de `params.*` |
+| 5 | **Modo de render** | `Static`, `Dynamic`, `Static?`, `Rendering…` o `?` | El porqué, y lo que el modo desarrollo puede y no puede saber. Consulta [Modo de render](./render-mode) |
+| 6 | **Tiempos** | `server`: tiempo de render en el servidor. `TTFB`: tiempo hasta el primer byte de una carga completa. `nav`: duración de la petición RSC de una navegación en el cliente | Cada valor, y una pista para activar las request insights si están desactivadas |
+| 7 | **Fetch** | Llamadas `fetch` del servidor y porcentaje de acierto de la caché. Solo con request insights | Resumen de la caché y cada fetch. Consulta [Caché de fetch](./fetch-cache) |
+| 8 | **Errores** | Errores del cliente + error del servidor de esta página. En rojo cuando son > 0 | Errores del servidor (clic → profiler) y errores del cliente (expandir → stack) |
+| 9 | **Next** | Versión de Next.js instalada | Versión de React, request insights activadas/desactivadas, HMR socket conectado/desconectado |
+| 10 | **Tema** | Tema actual | Al hacer clic alterna system → light → dark |
+| 11 | **Minimizar** | Icono de cerrar | Pliega la barra a un círculo |
+
+El estado, la ruta y los tiempos siempre describen la **página en la que estás**. Cuando navegas en el cliente, la barra cambia a los datos de la nueva página en cuanto termina su petición RSC.
+
+### De dónde sale cada valor
+
+| Valor | Origen |
+|---|---|
+| Estado, TTFB | [Navigation Timing](https://developer.mozilla.org/docs/Web/API/PerformanceNavigationTiming) del navegador (`responseStatus`, `responseStart`) |
+| Estado y `nav` en navegaciones en el cliente | [Resource Timing](https://developer.mozilla.org/docs/Web/API/PerformanceResourceTiming) del navegador para la petición `?_rsc=` |
+| Ruta (Next 16) | `route` de la request insight que Next envía por el HMR socket de desarrollo |
+| Ruta (Next 15 / sin insights) | Reconstruida a partir de `usePathname()` y `useParams()` |
+| Modo de render | Datos del indicador estático de desarrollo de Next, corregidos con la información de los fetches |
+| Tiempo del servidor, fetches, errores del servidor | Request insights de Next 16 |
+| Errores del cliente | Eventos `error` y `unhandledrejection` de `window` |
+
+Más en [Cómo funciona](./architecture).
+
+## Errores
+
+El segmento de errores cuenta los **errores del cliente en la página actual** más **un error del servidor** si la petición al servidor de esta página terminó con un error.
+
+- Los **errores del servidor** muestran el span donde se originó el error y su mensaje, p. ej. `AppRender.waitShellReady · boom`. Haz clic en la fila (**Details**) para abrir el profiler en esa petición con el error expandido.
+- Los **errores del cliente** (excepciones no capturadas y rechazos de promesas no gestionados) se expanden en el mismo sitio para mostrar su stack trace.
+- Los errores del cliente se reinician cuando navegas a otra página y se limitan a los últimos 20. El botón **Clear** del profiler también los vacía.
+
+<Callout type="note">
+  El stack trace del servidor nunca llega al navegador. Se imprime en la terminal que ejecuta `next dev`.
+</Callout>
+
+## Minimizar
+
+Haz clic en el logo o en el botón de cerrar y la barra se encoge en un **círculo de 52 px** en la esquina inferior izquierda. El círculo te mantiene informado:
+
+- un **punto con degradado** cuando la página devolvió 2xx; ámbar para 3xx, rojo para 4xx/5xx, gris cuando se desconoce;
+- una **burbuja roja con el número** cuando la página tiene errores.
+
+Haz clic en el círculo para expandir la barra de nuevo. El estado plegado se recuerda por navegador.
+
+## Tema
+
+La barra sigue por defecto la preferencia clara/oscura del sistema operativo. El botón de tema alterna **system → light → dark** y recuerda la elección. Establece el tema inicial con la prop `theme`; consulta [Configuración](./configuration).
+
+## Comportamiento responsive
+
+| Viewport | Comportamiento |
+|---|---|
+| más de 1024 px | Todo visible |
+| hasta 1024 px | Oculta la versión de Next, las etiquetas `fetch` / `errors`, el valor TTFB/nav cuando hay tiempo del servidor disponible y la etiqueta `% hit` |
+| hasta 640 px | Márgenes de 8 px; la barra se desplaza horizontalmente. El logo de la izquierda siempre la minimiza |
+
+## Teclado y accesibilidad
+
+- <kbd>Tab</kbd> recorre los segmentos; un segmento enfocado abre su panel.
+- <kbd>Esc</kbd> cierra el profiler.
+- Las animaciones se desactivan cuando el sistema operativo pide movimiento reducido.
+- La barra vive en un Shadow DOM: tu CSS no puede romperla y su CSS no puede filtrarse a tu app.

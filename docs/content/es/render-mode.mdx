@@ -1,0 +1,76 @@
+La insignia del modo de render responde a una pregunta: *¿esta ruta será estática o se renderizará en cada petición en producción?* En `next dev` cada petición se renderiza bajo demanda, así que la respuesta hay que deducirla. Esta página explica cómo.
+
+## Los valores
+
+| Insignia | Significado |
+|---|---|
+| **Static** | Next no vio nada que obligue a renderizar en tiempo de petición. |
+| **Dynamic** | La ruta usa una API de petición, `force-dynamic`, o un fetch que se excluye de la caché. |
+| **Static?** | Next dice estática, pero la ruta tiene un segmento dinámico (`[slug]`). Solo es estática en producción si `generateStaticParams` devuelve esos params. |
+| **Rendering…** | La ruta se está renderizando ahora mismo; el veredicto llega cuando termina. |
+| **?** | Desconocido: sin conexión con el servidor de desarrollo, una respuesta de error, o Cache Components activado. |
+
+## Cómo decide Next en desarrollo
+
+El servidor de desarrollo de Next registra, para cada ruta renderizada, si es estática, y lo envía al navegador por su HMR socket (es lo que alimenta el propio indicador "Static route" de Next). La regla, en `next/dist/server/app-render/app-render.js`, es:
+
+```js
+const isStatic = !requestStore.usedDynamic && !workStore.forceDynamic
+```
+
+- `usedDynamic` pasa a ser true cuando la página lee una **API de petición**: `headers()`, `cookies()`, `searchParams`, `connection()`, `draftMode()`…
+- `forceDynamic` es `export const dynamic = 'force-dynamic'`.
+
+## Dónde se equivoca el modo desarrollo
+
+`next build` sabe más que `next dev`. Dos casos habituales salieron de las pruebas con Next 16.3.6:
+
+| Ruta | Next en desarrollo | NextToolbar | `next build` |
+|---|---|---|---|
+| Usa `headers()` | Dynamic | Dynamic | ƒ Dynamic |
+| `fetch(url, { cache: 'no-store' })` | **Static** | **Dynamic** | ƒ Dynamic |
+| `/blog/[slug]` sin `generateStaticParams` | **Static** | **Static?** | ƒ Dynamic |
+| `export const revalidate = 60` | Static | Static | ○ ISR, 1 min |
+
+### Fetches no-store
+
+Un fetch `no-store` solo marca la ruta como dinámica cuando Next está haciendo **generación estática** (el código de `patch-fetch.js` está protegido por `workStore.isStaticGeneration`). En desarrollo eso nunca ocurre, así que Next reporta Static.
+
+NextToolbar lo corrige con las [request insights](./fetch-cache): si algún fetch de la petición se saltó la caché por uno de estos motivos, la insignia pasa a **Dynamic** y el panel muestra qué fetch lo provocó:
+
+| Motivo de caché | Procede de |
+|---|---|
+| `cache: no-store`, `cache: no-cache` | Las opciones del fetch |
+| `revalidate: 0` | `next: { revalidate: 0 }` o un `revalidate = 0` del segmento |
+| `fetchCache = force-no-store`, `only-no-store`, `default-no-store` | Configuración del segmento |
+| `noStore call` | `unstable_noStore()` / `noStore()` |
+
+No incluidos a propósito:
+
+- `auto no cache`: los fetches con `POST` o con cabeceras `Authorization`/`Cookie` no se guardan en caché, pero no hacen que la ruta sea dinámica en `next build`.
+- `cache-control: no-cache (hard refresh)`: el navegador pidió datos frescos; eso no dice nada sobre la ruta.
+
+<Callout type="note">
+  Esta corrección necesita Next 16 con `experimental.requestInsights`. En Next 15 la insignia muestra lo que reporta Next.
+</Callout>
+
+### Segmentos dinámicos
+
+Una ruta como `/blog/[slug]` se renderiza bajo demanda en producción a menos que `generateStaticParams` enumere los params (entonces se prerenderiza, ● SSG). El navegador no puede saber si esa función existe, así que NextToolbar muestra **Static?** con una explicación en lugar de afirmar una cosa u otra.
+
+### SSG frente a ISR
+
+El modo desarrollo no tiene caché, así que una página con `revalidate = 60` se ve exactamente igual que una completamente estática. Ambas muestran **Static**.
+
+## Respuestas de error
+
+Las respuestas 404 y 500 muestran `?`: Next marca las páginas de error y de no encontrado como estáticas en sus datos de desarrollo, lo cual es ruido.
+
+## Next 15 y Cache Components
+
+- **Next 15** solo envía `true` para las rutas estáticas; las rutas dinámicas simplemente no aparecen. Una vez que ha llegado la respuesta de la página, NextToolbar trata "ausente" como Dynamic.
+- **Cache Components** (Next 16) hace que las páginas sean parcialmente estáticas; Next no envía datos static/dynamic para ellas, así que la insignia muestra `?`.
+
+<Callout type="tip" title="La fuente de verdad">
+  Para obtener la respuesta real, ejecuta `next build`: su tabla de rutas marca cada ruta como ○ Static, ● SSG o ƒ Dynamic, con los tiempos de revalidación para ISR.
+</Callout>

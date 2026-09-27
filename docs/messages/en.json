@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "title": "NextToolbar docs",
+    "description": "A floating debug toolbar for the Next.js App Router: status, route, render mode, timings, fetch cache and a request profiler."
+  },
+  "ui": {
+    "docs": "Docs",
+    "menu": "Menu",
+    "previous": "Previous",
+    "next": "Next",
+    "edit": "Edit this page on GitHub",
+    "theme": "Toggle theme",
+    "language": "Language",
+    "github": "GitHub",
+    "license": "Released under the MIT License."
+  },
+  "sections": {
+    "start": "Get started",
+    "features": "Features",
+    "reference": "Reference",
+    "project": "Project"
+  },
+  "pages": {
+    "index": {
+      "title": "Introduction",
+      "description": "What NextToolbar is, what it shows and when to use it."
+    },
+    "getting-started": {
+      "title": "Getting started",
+      "description": "Install the package, add it to your root layout and run next dev."
+    },
+    "configuration": {
+      "title": "Configuration",
+      "description": "The theme prop, the recommended next.config options, basePath and assetPrefix."
+    },
+    "toolbar": {
+      "title": "The toolbar",
+      "description": "Every segment of the bar, its hover panel, minimizing and themes."
+    },
+    "profiler": {
+      "title": "Request profiler",
+      "description": "The per-request panel: summary, errors, fetches, timeline and Clear."
+    },
+    "render-mode": {
+      "title": "Render mode",
+      "description": "How Static, Dynamic and Static? are decided, and why dev can be wrong."
+    },
+    "fetch-cache": {
+      "title": "Fetch cache",
+      "description": "HIT, HMR, MISS and SKIP, the hit rate and the cache reasons."
+    },
+    "compatibility": {
+      "title": "Compatibility",
+      "description": "What works on Next.js 15 and 16, and which browsers are supported."
+    },
+    "architecture": {
+      "title": "How it works",
+      "description": "Architecture, data sources, the HMR socket and a map of the source files."
+    },
+    "troubleshooting": {
+      "title": "Troubleshooting & FAQ",
+      "description": "Known limitations and fixes for common problems."
+    },
+    "design": {
+      "title": "Design",
+      "description": "Design tokens, the primary gradient, light and dark themes, icons and the logo."
+    },
+    "contributing": {
+      "title": "Contributing",
+      "description": "Monorepo layout, the playground, tests, these docs and releasing."
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "title": "Docs de NextToolbar",
+    "description": "Una barra de depuración flotante para el App Router de Next.js: status, ruta, modo de render, tiempos, caché de fetch y un profiler de peticiones."
+  },
+  "ui": {
+    "docs": "Docs",
+    "menu": "Menú",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "edit": "Editar esta página en GitHub",
+    "theme": "Cambiar tema",
+    "language": "Idioma",
+    "github": "GitHub",
+    "license": "Publicado bajo la licencia MIT."
+  },
+  "sections": {
+    "start": "Primeros pasos",
+    "features": "Funcionalidades",
+    "reference": "Referencia",
+    "project": "Proyecto"
+  },
+  "pages": {
+    "index": {
+      "title": "Introducción",
+      "description": "Qué es NextToolbar, qué muestra y cuándo usarla."
+    },
+    "getting-started": {
+      "title": "Empezar",
+      "description": "Instala el paquete, añádelo al layout raíz y ejecuta next dev."
+    },
+    "configuration": {
+      "title": "Configuración",
+      "description": "La prop theme, las opciones recomendadas de next.config, basePath y assetPrefix."
+    },
+    "toolbar": {
+      "title": "La barra",
+      "description": "Cada segmento de la barra, su panel emergente, minimizar y temas."
+    },
+    "profiler": {
+      "title": "Profiler de peticiones",
+      "description": "El panel por petición: resumen, errores, fetches, timeline y Clear."
+    },
+    "render-mode": {
+      "title": "Modo de render",
+      "description": "Cómo se decide Static, Dynamic y Static?, y por qué dev puede equivocarse."
+    },
+    "fetch-cache": {
+      "title": "Caché de fetch",
+      "description": "HIT, HMR, MISS y SKIP, el porcentaje de acierto y los motivos de caché."
+    },
+    "compatibility": {
+      "title": "Compatibilidad",
+      "description": "Qué funciona en Next.js 15 y 16, y qué navegadores están soportados."
+    },
+    "architecture": {
+      "title": "Cómo funciona",
+      "description": "Arquitectura, fuentes de datos, el socket de HMR y un mapa de los archivos."
+    },
+    "troubleshooting": {
+      "title": "Problemas y preguntas frecuentes",
+      "description": "Limitaciones conocidas y soluciones a problemas comunes."
+    },
+    "design": {
+      "title": "Diseño",
+      "description": "Tokens de diseño, el degradado primario, temas claro y oscuro, iconos y el logo."
+    },
+    "contributing": {
+      "title": "Contribuir",
+      "description": "Estructura del monorepo, el playground, tests, esta documentación y cómo publicar."
+    }
+  }
+}

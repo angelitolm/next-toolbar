@@ -1,0 +1,63 @@
+## La barra desaparece cuando una página lanza un error
+
+Sin `app/error.tsx`, un error de render no capturado hace que Next sustituya todo el layout raíz por su página de fallback, barra incluida. El overlay de errores de Next se sigue mostrando. Añade un boundary para conservar el layout:
+
+```tsx title="app/error.tsx"
+'use client'
+
+export default function Error({ error }: { error: Error }) {
+  return <h1>Something went wrong: {error.message}</h1>
+}
+```
+
+## El modo de render dice Static pero en producción es dinámica
+
+El modo desarrollo solo puede ver las APIs de petición y `force-dynamic`. Un fetch `no-store` o un segmento dinámico sin `generateStaticParams` parecen estáticos en desarrollo. NextToolbar detecta el caso no-store con las request insights y marca los segmentos dinámicos como `Static?`. Ejecuta `next build` para obtener la respuesta definitiva. Consulta [Modo de render](./render-mode).
+
+## El modo de render muestra `?`
+
+Una de estas:
+
+- la página devolvió 4xx/5xx (el modo de render no se muestra para respuestas de error);
+- la barra no está conectada al servidor de desarrollo: pasa el ratón por la versión de Next y comprueba **HMR socket**;
+- tu app usa **Cache Components**, para los que Next no envía datos static/dynamic.
+
+## El estado muestra `—`
+
+El navegador no expone `responseStatus` (Safari), o la página vino de la caché de atrás/adelante del navegador.
+
+## No hay tiempo del servidor, fetches ni profiler
+
+Estás en Next 15, o `experimental.requestInsights` no está activado en `next.config`. El panel del segmento de tiempos muestra una pista cuando es así. Consulta [Configuración](./configuration).
+
+## El indicador "N" de Next tapa la barra
+
+Muévelo o desactívalo:
+
+```ts
+devIndicators: { position: 'top-right' } // or: devIndicators: false
+```
+
+## La lista de peticiones tiene demasiado ruido
+
+Recoge peticiones de cada página, recarga y pestaña, además de route handlers y prefetches. Usa **Clear** en el profiler: conserva solo la petición de la página actual. Consulta [Profiler → Clear](./profiler#clear).
+
+## Las peticiones borradas han vuelto
+
+La barra oculta las peticiones que empezaron antes de que borraras, comparando el reloj del servidor de desarrollo con el del navegador. Con un servidor de desarrollo remoto cuyo reloj vaya atrasado, algunas pueden reaparecer.
+
+## El patrón de ruta es incorrecto en Next 15
+
+Sin request insights el patrón se reconstruye a partir de la URL y de `useParams()`. Un param cuyo valor coincide con un segmento estático (`/blog/blog`) puede etiquetarse mal. Next 16 con request insights da el patrón exacto.
+
+## ¿Afecta a producción?
+
+No. El componente devuelve `null` a menos que `NODE_ENV` sea `development`: sin render, sin socket, sin listeners.
+
+## ¿Funciona con `basePath`?
+
+Sí, sin configuración. Consulta [Configuración → basePath](./configuration#basepath-y-assetprefix).
+
+## ¿Funciona con el Pages Router?
+
+No. NextToolbar está hecha para el App Router (depende de los hooks de `next/navigation` y de las peticiones RSC).

@@ -1,0 +1,75 @@
+NextToolbar debería sentirse parte de una app moderna, no un panel de depuración de 2010: una superficie flotante, sombras suaves, radios moderados y un único color de marca fuerte usado con moderación.
+
+## El degradado principal
+
+Un degradado de lima → aguamarina es el color de marca. Señala "bien" y "lo que hay que mirar":
+
+```css
+--nt-from: #c6ff5c;
+--nt-to:   #5ef5e0;
+--nt-primary: linear-gradient(90deg, var(--nt-from), var(--nt-to));
+```
+
+Se usa en el chip de estado 2xx (con un brillo suave), el punto de estado del círculo minimizado, las píldoras **HIT** de la caché, las píldoras de estado del profiler, las barras del timeline, la petición seleccionada y la diagonal del logo. El texto sobre él siempre es casi negro (`#0b0f0c`).
+
+Los errores siguen siendo rojos y los avisos ámbar, así que el degradado nunca tiene que significar dos cosas.
+
+## Superficies
+
+| Token | Oscuro | Claro |
+|---|---|---|
+| Superficie | `#38383b → #1f1f21` (degradado vertical) | `#ffffff → #f3f4f6` |
+| Texto | `#f4f4f5` | `#18181b` |
+| Texto atenuado | `#9d9da3` | `#6b6b76` |
+| Borde | blanco 9% | negro 10% |
+| Error | `#ff6b6b` | `#d93636` |
+| Aviso | `#ffb547` | `#b86e00` |
+
+Las superficies llevan una sombra grande y suave más un realce superior de 1 px, que es lo que hace que la barra parezca flotar.
+
+## Forma
+
+| Elemento | Radio |
+|---|---|
+| Barra | 14 px |
+| Segmentos, botones de icono | 9 px |
+| Chips e insignias | 5–8 px |
+| Paneles al pasar el ratón | 12 px |
+| Profiler | 16 px |
+| Lanzador minimizado | círculo |
+
+## Temas
+
+La barra incluye ambos temas como propiedades personalizadas de CSS en el host del Shadow DOM. El oscuro es el tema por defecto; el claro se aplica con `data-theme="light"`, o cuando el sistema operativo prefiere el claro y no se fuerza ningún tema.
+
+El logo siempre va sobre un fondo oscuro, en ambos temas: el extremo lima del degradado desaparece sobre blanco.
+
+## Iconos
+
+Todos los iconos vienen de [Iconsax](https://iconsax-react.pages.dev/), variante **Broken**.
+
+| Dónde | Icono |
+|---|---|
+| Id de petición | `Hashtag` |
+| Ruta | `Routing2` |
+| Tiempos | `Timer1` |
+| Fetches | `ArrangeHorizontal` |
+| Errores | `Danger` |
+| Versión de Next | `Code` |
+| Tema | `Monitor`, `Sun1`, `Moon` |
+| Minimizar / cerrar | `CloseCircle` |
+| Clear | `Trash` |
+| Details, expandir | `ArrowRight`, `ArrowRight2` |
+
+El paquete incrusta los SVG de estos iconos (`src/icons.tsx`) en lugar de depender de una librería de iconos. Esta documentación usa `iconsax-reactjs` directamente.
+
+## El logo
+
+Una **N** cuyas dos verticales son barras redondeadas y cuya diagonal es el degradado principal brillante: la misma franja que dibuja la barra para una petición sana.
+
+- `packages/next-toolbar/logo.svg`: marca independiente sobre un círculo oscuro, para READMEs y npm.
+- `src/Logo.tsx`: la marca dentro de la barra; sus verticales usan `currentColor`.
+
+## Movimiento
+
+La barra crece desde la posición del lanzador (escalando desde la izquierda), los paneles suben 6 px al aparecer y el lanzador se agranda ligeramente al pasar el ratón. Todo el movimiento se desactiva con `prefers-reduced-motion`.

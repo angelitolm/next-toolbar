@@ -1,0 +1,8 @@
+packages:
+  - packages/*
+  - playground
+  - docs
+allowBuilds:
+  esbuild: true
+  "@parcel/watcher": false
+  "@swc/core": false
