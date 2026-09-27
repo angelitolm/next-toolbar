@@ -19,7 +19,7 @@
     "url": "git+https://github.com/angelitolm/next-toolbar.git",
     "directory": "packages/next-toolbar"
   },
-  "homepage": "https://github.com/angelitolm/next-toolbar/tree/main/docs",
+  "homepage": "https://next-toolbar.angellm.dev",
   "bugs": "https://github.com/angelitolm/next-toolbar/issues",
   "type": "module",
   "sideEffects": false,

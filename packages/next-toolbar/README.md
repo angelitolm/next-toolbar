@@ -1,4 +1,4 @@
-<p align="center"><img src="./logo.svg" width="96" height="96" alt="NextToolbar logo"></p>
+<p align="center"><img src="https://next-toolbar.angellm.dev/logo.svg" width="96" height="96" alt="NextToolbar logo"></p>
 
 # NextToolbar
 
@@ -20,7 +20,7 @@ Click the request id (e.g. `7b5063`) to open the profiler: recent requests (docu
 
 Requires Next.js 15+ and React 19. `basePath` and `assetPrefix` work without extra config.
 
-**Documentation:** [English](https://github.com/angelitolm/next-toolbar/tree/main/docs/content/en) · [Español](https://github.com/angelitolm/next-toolbar/tree/main/docs/content/es)
+**Documentation:** [next-toolbar.angellm.dev](https://next-toolbar.angellm.dev) · [Live demo](https://next-toolbar.angellm.dev/en/demo) · [Español](https://next-toolbar.angellm.dev/es)
 
 ## Install
 
