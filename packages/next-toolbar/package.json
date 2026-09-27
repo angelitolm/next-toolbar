@@ -1,6 +1,6 @@
 {
   "name": "@angelitolm/next-toolbar",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Floating debug toolbar for the Next.js App Router (dev only): status, route, render mode, timings, fetch cache and a request profiler",
   "keywords": [
     "nextjs",
