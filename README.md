@@ -9,6 +9,8 @@
   <a href="https://www.npmjs.com/package/@angelitolm/next-toolbar#provenance"><img src="https://img.shields.io/badge/npm-provenance-2ea44f?logo=npm" alt="npm provenance"></a>
 </p>
 
+<p align="center"><a href="https://next-toolbar.angellm.dev/en/demo"><img src="./docs/public/demo.gif" width="880" alt="NextToolbar demo: render mode and fetch cache panels, a 500 in the request profiler, security advisories and minimizing the bar"></a></p>
+
 ---
 
 Building a Next.js app means asking the same questions all day: did this page return a 200? Is this route static or dynamic? Why did it take 800 ms? Did that fetch hit the cache? Answering them usually means juggling the Network tab, the terminal and Next's own indicator.
