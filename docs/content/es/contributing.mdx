@@ -96,7 +96,7 @@ No uses `pnpm link` para esto: el paquete usaría su propia copia de React de de
 
 1. Sube `version` en `packages/next-toolbar/package.json`.
 2. `pnpm build && pnpm test`
-3. Desde `packages/next-toolbar`: `npm publish`. El paquete tiene scope y `publishConfig.access` es `public`.
+3. Haz commit, crea el tag y súbelo: `git tag v<versión> && git push origin v<versión>`. El workflow Publish comprueba que el tag coincide con `version`, pasa los checks y publica en npm con provenance (trusted publishing, sin token).
 
 ## Licencia
 

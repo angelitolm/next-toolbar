@@ -96,7 +96,7 @@ Don't use `pnpm link` for this: the package would resolve its own dev copy of Re
 
 1. Bump `version` in `packages/next-toolbar/package.json`.
 2. `pnpm build && pnpm test`, then test the tarball as above.
-3. From `packages/next-toolbar`: `npm publish`. The package is scoped and `publishConfig.access` is `public`.
+3. Commit, then tag and push: `git tag v<version> && git push origin v<version>`. The Publish workflow checks the tag matches `version`, runs the checks and publishes to npm with provenance (trusted publishing, no token).
 
 ## License
 
