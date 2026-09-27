@@ -7,3 +7,6 @@ next-env.d.ts
 .idea/
 .vscode/
 .tarballs/
+.env*
+.vercel
+.npmrc
