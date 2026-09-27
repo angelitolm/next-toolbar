@@ -4,6 +4,11 @@
 
 <p align="center">A floating debug toolbar for the Next.js App Router: the answers you dig for in DevTools and the terminal, at a glance.</p>
 
+<p align="center">
+  <a href="https://github.com/angelitolm/next-toolbar/actions/workflows/ci.yml"><img src="https://github.com/angelitolm/next-toolbar/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.npmjs.com/package/@angelitolm/next-toolbar#provenance"><img src="https://img.shields.io/badge/npm-provenance-2ea44f?logo=npm" alt="npm provenance"></a>
+</p>
+
 ---
 
 Building a Next.js app means asking the same questions all day: did this page return a 200? Is this route static or dynamic? Why did it take 800 ms? Did that fetch hit the cache? Answering them usually means juggling the Network tab, the terminal and Next's own indicator.
