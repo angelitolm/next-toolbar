@@ -4,6 +4,7 @@ import { useParams, usePathname } from 'next/navigation'
 import { type Advisory, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
 import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Hashtag, Monitor, Moon, Refresh2, Routing2, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
+import { VERSION } from './version'
 import { CachePill, CacheSummary, Profiler } from './Profiler'
 import { css } from './styles'
 
@@ -160,9 +161,10 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity }: 
     </button>
   ) : (
     <div className="bar" role="toolbar" aria-label="NextToolbar">
-      <button className="logo-btn" onClick={() => toggle(true)} title="Minimize" aria-label="Minimize NextToolbar">
+      <button className="logo-btn" onClick={() => toggle(true)} title={`NextToolbar v${VERSION} · Minimize`} aria-label="Minimize NextToolbar">
         <Logo size={26} />
       </button>
+      <span className="nt-version hide-sm" title="NextToolbar version">v{VERSION}</span>
       <div className="sep" />
 
       <Segment className={`status ${statusClass}`} label={status ?? '—'}>
@@ -306,6 +308,7 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity }: 
       <div className="sep hide-md" />
 
       <Segment className="right hide-md" label={<><Code className="ico" /><span className="dim">Next</span><b>{nextVersion ?? '?'}</b></>}>
+        <Row k="NextToolbar">{VERSION}</Row>
         <Row k="Next.js">{nextVersion ?? 'unknown'}</Row>
         <Row k="React">{reactVersion}</Row>
         <Row k="Request insights">{insightsAvailable ? 'on' : 'off'}</Row>

@@ -130,6 +130,8 @@ details[open] > summary > .chevron { transform: rotate(90deg); }
 .logo-btn, .mark { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; display: grid; place-items: center; background: var(--nt-mark-bg); color: var(--nt-logo); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08); }
 .logo-btn:hover { filter: brightness(1.15); }
 .mark { width: 30px; height: 30px; border-radius: 8px; }
+.nt-version { padding: 0 4px 0 6px; font: 500 11px var(--nt-mono); color: var(--nt-dim); white-space: nowrap; }
+.brand .nt-version { padding: 0; }
 .sep { width: 1px; height: 22px; margin: 0 4px; background: var(--nt-border); flex-shrink: 0; }
 .seg {
   position: relative; height: 40px; display: flex; align-items: center; gap: 7px; padding: 0 12px;

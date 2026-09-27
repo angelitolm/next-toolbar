@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { ArrowRight2, CloseCircle, Trash } from './icons'
 import { Logo } from './Logo'
+import { VERSION } from './version'
 import { errorOrigins, errorsDuring, supportsRequestInsights, fetchCacheStats, type LoggedError, type Visit, insightHttpStatus, pathOf, spanRows, type FetchCacheStats, type Insight, type InsightFetch } from './core'
 
 type Props = {
@@ -32,6 +33,7 @@ export function Profiler({ insights, selected, onSelect, onClose, onClear, enabl
             <Logo size={22} />
           </span>
           NextToolbar
+          <span className="dim nt-version">v{VERSION}</span>
         </span>
         <span className="dim">·</span>
         <b>{enabled ? 'Requests' : 'Page visits'}</b>
