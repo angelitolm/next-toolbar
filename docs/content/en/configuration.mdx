@@ -16,7 +16,7 @@ The package also exports the types `NextToolbarProps` and `Theme`.
 
 | Option | Recommended | Why |
 |---|---|---|
-| `experimental.requestInsights` | `true` (Next 16) | Unlocks server timing, fetches with cache outcome, server errors, exact route patterns, the no-store render-mode correction and the profiler. |
+| `experimental.requestInsights` | `true` (Next 16.3+) | Unlocks server timing, fetches with cache outcome, server errors, exact route patterns, the no-store render-mode correction and the profiler. |
 | `devIndicators` | `{ position: 'top-right' }` or `false` | Next's indicator sits bottom-left by default, on top of the toolbar's logo. |
 
 ```ts title="next.config.ts"
@@ -31,7 +31,7 @@ export default nextConfig
 ```
 
 <Callout type="note">
-  `requestInsights` only exists in Next 16. Next 15 ignores it, so the same config works on both.
+  `requestInsights` only exists from Next 16.3. On older versions TypeScript flags it as an unknown option in `next.config.ts`, so only add it on 16.3+.
 </Callout>
 
 ## `basePath` and `assetPrefix`
@@ -54,7 +54,7 @@ Clear them to go back to the defaults. If `localStorage` is unavailable (private
 
 ## Error boundary
 
-Not a toolbar option, but worth repeating: add `app/error.tsx` so a render error doesn't take the root layout, and the toolbar, down with it. See [Getting started](./getting-started#4-add-an-error-boundary).
+Not a toolbar option, but worth repeating: add `app/error.tsx` so a render error doesn't take the root layout, and the toolbar, down with it. See [Getting started](./getting-started#4-keep-it-on-screen-when-a-page-crashes).
 
 ## Demo component
 

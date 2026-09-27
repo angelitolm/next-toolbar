@@ -1,14 +1,26 @@
 ## The toolbar disappears when a page throws
 
-Without `app/error.tsx`, an uncaught render error makes Next replace the whole root layout with its fallback page, toolbar included. Next's error overlay still shows. Add a boundary to keep the layout:
+When no `error.tsx` catches a render error, Next replaces the whole root layout with its own error page ("This page couldn't load"), toolbar included. Render the toolbar in `app/global-error.tsx` as well; it reconnects and shows the 500 and the failing request:
 
-```tsx title="app/error.tsx"
+```tsx title="app/global-error.tsx"
 'use client'
+import { NextToolbar } from '@angelitolm/next-toolbar'
 
-export default function Error({ error }: { error: Error }) {
-  return <h1>Something went wrong: {error.message}</h1>
+export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
+  return (
+    <html lang="en">
+      <body>
+        <h1>Something went wrong</h1>
+        <p>{error.digest ?? error.message}</p>
+        <NextToolbar />
+      </body>
+    </html>
+  )
 }
 ```
+
+See [Getting started](./getting-started#4-keep-it-on-screen-when-a-page-crashes).
+
 
 ## The render mode says Static but production is dynamic
 
@@ -28,7 +40,7 @@ The browser doesn't expose `responseStatus` (Safari), or the page came from the 
 
 ## No server time, fetches or profiler
 
-You're on Next 15, or `experimental.requestInsights` isn't enabled in `next.config`. The time segment's panel shows a hint when this is the case. See [Configuration](./configuration).
+You're on a Next version before 16.3, or `experimental.requestInsights` isn't enabled in `next.config`. The time segment's panel shows a hint when this is the case. See [Configuration](./configuration).
 
 ## Next's "N" indicator covers the toolbar
 
@@ -46,9 +58,9 @@ It collects requests from every page, reload and tab, plus route handlers and pr
 
 The toolbar hides requests that started before you cleared, comparing the dev server's clock with the browser's. With a remote dev server whose clock is behind, a few may reappear.
 
-## The route pattern is wrong on Next 15
+## The route pattern is wrong before Next 16.3
 
-Without request insights the pattern is rebuilt from the URL and `useParams()`. A param whose value equals a static segment (`/blog/blog`) can be mislabeled. Next 16 with request insights gives the exact pattern.
+Without request insights the pattern is rebuilt from the URL and `useParams()`. A param whose value equals a static segment (`/blog/blog`) can be mislabeled. Next 16.3+ with request insights gives the exact pattern.
 
 ## Does it affect production?
 

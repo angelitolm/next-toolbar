@@ -1,6 +1,6 @@
 ## Matriz de funciones
 
-| Función | Next 15 | Next 16 | Next 16 + `requestInsights` |
+| Función | Next 15 – 16.2 | Next 16.3+ | Next 16.3+ con `requestInsights` |
 |---|:---:|:---:|:---:|
 | Estado HTTP (carga y navegación en el cliente) | ✓ | ✓ | ✓ |
 | Patrón de ruta | heurístico | heurístico | exacto |
@@ -16,11 +16,17 @@
 
 Los patrones de ruta "heurísticos" se reconstruyen a partir de `usePathname()` y `useParams()`. Aciertan en casi todos los casos; un param cuyo valor coincide con un segmento estático posterior (p. ej. `/blog/blog`) puede etiquetarse mal.
 
+<Callout type="note" title="requestInsights necesita 16.3">
+  `experimental.requestInsights` se añadió en Next.js 16.3. En 16.0–16.2 la opción no existe (TypeScript la marca en `next.config.ts`) y no tiene efecto.
+</Callout>
+
 ## Versiones probadas
 
 | Versión | Cómo |
 |---|---|
 | Next **16.3.6** | Prueba completa en el navegador |
+| Next **16.2.6** | Probada en una app real; código fuente revisado |
+| Next **16.0.10**, **16.1.6** | Revisadas a partir del código fuente |
 | Next **15.5.26** | Prueba completa en el navegador |
 | Next **15.0.8** | Revisada a partir del código fuente (formato de mensajes), sin ejecutar |
 
@@ -30,13 +36,15 @@ Se requiere React 19 (es el que usa el App Router en Next 15+).
 
 NextToolbar lee el HMR socket interno de desarrollo de Next, cuya forma cambió entre versiones. La barra las maneja todas:
 
-| | 15.0 | 15.5 | 16.x |
-|---|---|---|---|
-| Ruta del socket | `/_next/webpack-hmr` | `/_next/webpack-hmr` | `/_next/hmr` |
-| Campo del mensaje | `action` | `action` | `type` |
-| Mensaje de datos estáticos | `appIsrManifest` | `isrManifest` | `isrManifest` |
-| Rutas dinámicas en él | ausentes | ausentes | `false` |
-| Request insights | — | — | `requestInsightsUpdate` |
+| | 15.0 | 15.5 | 16.0 – 16.2 | 16.3+ |
+|---|---|---|---|---|
+| Ruta del socket | `/_next/webpack-hmr` | `/_next/webpack-hmr` | `/_next/webpack-hmr` | `/_next/hmr` |
+| Campo del mensaje | `action` | `action` | `type` | `type` |
+| Mensaje de datos estáticos | `appIsrManifest` | `isrManifest` | `isrManifest` | `isrManifest` |
+| Rutas dinámicas en él | ausentes | ausentes | `false` | `false` |
+| Request insights | — | — | — | `requestInsightsUpdate` |
+
+La barra elige la ruta del socket según la versión de Next y, si esa rechaza la conexión, prueba la otra.
 
 <Callout type="warning" title="API interna">
   Son mensajes internos y no documentados de Next.js. Una versión futura de Next puede cambiarlos; cuando eso ocurra, los segmentos afectados mostrarán `?` en lugar de romper la página.

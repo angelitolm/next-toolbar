@@ -12,11 +12,11 @@ Shows, for the current page:
 - Route pattern (`/blog/[slug]`)
 - Render mode: Static / Dynamic / Static? (dynamic segment, depends on `generateStaticParams`)
 - Server render time, TTFB / navigation time
-- Server `fetch` calls with data-cache stats: HIT / HMR / MISS / SKIP, hit rate and reason (Next 16 with request insights)
+- Server `fetch` calls with data-cache stats: HIT / HMR / MISS / SKIP, hit rate and reason (Next 16.3+ with request insights)
 - Client and server errors: click a server error to open it in the profiler, expand a client error to see its stack
 - Next.js and React versions
 
-Click the request id (e.g. `7b5063`) to open the profiler: recent requests (documents and RSC payloads) with status, summary, root-cause errors, server fetches and a span timeline. Needs Next 16 with `experimental.requestInsights`. **Clear** empties the request list (keeping the current page's request) and the client errors. Esc closes it.
+Click the request id (e.g. `7b5063`) to open the profiler: recent requests (documents and RSC payloads) with status, summary, root-cause errors, server fetches and a span timeline. Needs Next 16.3+ with `experimental.requestInsights`. **Clear** empties the request list (keeping the current page's request) and the client errors. Esc closes it.
 
 Requires Next.js 15+ and React 19. `basePath` and `assetPrefix` work without extra config.
 
@@ -58,7 +58,7 @@ Recommended `next.config.ts`:
 const nextConfig = {
   // Next's own indicator sits bottom-left by default and overlaps the toolbar.
   devIndicators: { position: 'top-right' },
-  // Next 16 only: server timing, fetches and exact route patterns.
+  // Next 16.3+ only: server timing, fetches and exact route patterns.
   experimental: { requestInsights: true },
 }
 ```
@@ -67,7 +67,7 @@ const nextConfig = {
 
 - **Render mode is Next's dev heuristic**: it only sees request APIs (`headers()`, `cookies()`, `searchParams`...) and `dynamic = 'force-dynamic'`. The toolbar also marks routes Dynamic when a fetch opts out of caching (`no-store`, `revalidate: 0`, `noStore()`), which needs request insights, and shows `Static?` for dynamic segments. `dynamic = 'force-static'` is not detected.
 - **SSG vs ISR**: `next dev` renders every request on demand, so both show as Static. Use `next build && next start` to see real caching.
-- **Error pages without a boundary**: an uncaught render error replaces the root layout, so the toolbar disappears (Next's error overlay still shows). Add `app/error.tsx` to keep it visible.
+- **Crashing pages**: an uncaught render error makes Next replace the root layout with its error page, toolbar included. Also render `<NextToolbar />` in `app/global-error.tsx` to keep it on screen.
 - **Cache Components (Next 16)**: Next doesn't publish static/dynamic info for these apps; render mode shows `?`.
 - **Route pattern on Next 15** is rebuilt from `useParams()` and can mislabel a param whose value matches a static segment.
 - **Status code** needs `responseStatus` (Chrome, Edge, Firefox). Safari shows `—`.

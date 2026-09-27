@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname } from 'next/navigation'
-import { assetPrefixFrom, errorOrigins, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
+import { alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
 import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, Hashtag, Monitor, Moon, Routing2, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { CachePill, CacheSummary, Profiler } from './Profiler'
@@ -194,9 +194,13 @@ export function ToolbarView({ data, defaultTheme, onClear }: ViewProps) {
       >
         {insight?.durationMs !== undefined && <Row k="Server render">{ms(insight.durationMs)}</Row>}
         {timing && <Row k={timing.via === 'rsc' ? 'RSC fetch' : 'Time to first byte'}>{ms(timing.ms)}</Row>}
-        {!insightsAvailable && isNext16 && (
+        {!insightsAvailable && (
           <div className="hint">
-            Enable <code>experimental.requestInsights</code> in next.config for server timing, fetches and exact routes.
+            {supportsRequestInsights(nextVersion) ? (
+              <>Enable <code>experimental.requestInsights</code> in next.config for server timing, fetches and exact routes.</>
+            ) : (
+              <>Server timing, fetches and exact routes need Next.js 16.3+ with <code>experimental.requestInsights</code> (this app runs {nextVersion ?? 'an unknown version'}).</>
+            )}
           </div>
         )}
       </Segment>
@@ -390,7 +394,7 @@ function useTimings() {
 }
 
 // Second socket to Next's dev HMR server: render-mode manifest (Next 15+) and
-// request insights (Next 16 with experimental.requestInsights). Internal API.
+// request insights (Next 16.3+ with experimental.requestInsights). Internal API.
 function useHmr() {
   const [manifest, setManifest] = useState<Record<string, boolean> | null>(null)
   const [connected, setConnected] = useState(false)
@@ -408,16 +412,23 @@ function useHmr() {
   useEffect(() => {
     // Like Next's client: current host, path under assetPrefix/basePath (even for a CDN assetPrefix).
     const prefix = assetPrefixFrom([...document.scripts].map((s) => s.src))
-    const url = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}${prefix}${hmrPath(window.next?.version)}`
+    const origin = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}${prefix}`
+    let path = hmrPath(window.next?.version)
     let ws: WebSocket
     let retry: ReturnType<typeof setTimeout>
     let disposed = false
 
     const connect = () => {
-      ws = new WebSocket(url)
-      ws.onopen = () => setConnected(true)
+      let opened = false
+      ws = new WebSocket(origin + path)
+      ws.onopen = () => {
+        opened = true
+        setConnected(true)
+      }
       ws.onclose = () => {
         setConnected(false)
+        // Never opened: probably the wrong endpoint for this Next version, try the other one.
+        if (!opened) path = alternateHmrPath(path)
         if (!disposed) retry = setTimeout(connect, 2000) // dev server restarts
       }
       ws.onmessage = (e) => {

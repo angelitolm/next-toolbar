@@ -16,7 +16,7 @@ El paquete también exporta los tipos `NextToolbarProps` y `Theme`.
 
 | Opción | Recomendado | Por qué |
 |---|---|---|
-| `experimental.requestInsights` | `true` (Next 16) | Activa los tiempos del servidor, los fetches con su resultado de caché, los errores del servidor, los patrones de ruta exactos, la corrección del modo de render por no-store y el profiler. |
+| `experimental.requestInsights` | `true` (Next 16.3+) | Activa los tiempos del servidor, los fetches con su resultado de caché, los errores del servidor, los patrones de ruta exactos, la corrección del modo de render por no-store y el profiler. |
 | `devIndicators` | `{ position: 'top-right' }` o `false` | El indicador de Next está abajo a la izquierda por defecto, encima del logo de la barra. |
 
 ```ts title="next.config.ts"
@@ -31,7 +31,7 @@ export default nextConfig
 ```
 
 <Callout type="note">
-  `requestInsights` solo existe en Next 16. Next 15 lo ignora, así que la misma configuración funciona en ambos.
+  `requestInsights` solo existe desde Next 16.3. En versiones anteriores TypeScript lo marca como opción desconocida en `next.config.ts`, así que añádelo solo en 16.3+.
 </Callout>
 
 ## `basePath` y `assetPrefix`
@@ -54,7 +54,7 @@ Bórralas para volver a los valores por defecto. Si `localStorage` no está disp
 
 ## Error boundary
 
-No es una opción de la barra, pero vale la pena repetirlo: añade `app/error.tsx` para que un error de render no tumbe el layout raíz, y la barra con él. Consulta [Empezar](./getting-started#4-añade-un-error-boundary).
+No es una opción de la barra, pero vale la pena repetirlo: añade `app/error.tsx` para que un error de render no tumbe el layout raíz, y la barra con él. Consulta [Empezar](./getting-started#4-mantenla-en-pantalla-cuando-una-página-falla).
 
 ## Componente de demo
 

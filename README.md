@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-For the full feature set, use Next.js 16 and enable request insights:
+For the full feature set, use Next.js 16.3+ and enable request insights:
 
 ```ts
 // next.config.ts

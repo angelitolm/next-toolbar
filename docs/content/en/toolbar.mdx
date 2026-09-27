@@ -29,10 +29,10 @@ The status, route and timing always describe the **page you're on**. When you na
 |---|---|
 | Status, TTFB | Browser [Navigation Timing](https://developer.mozilla.org/docs/Web/API/PerformanceNavigationTiming) (`responseStatus`, `responseStart`) |
 | Status and `nav` on client navigations | Browser [Resource Timing](https://developer.mozilla.org/docs/Web/API/PerformanceResourceTiming) of the `?_rsc=` request |
-| Route (Next 16) | `route` of the request insight Next sends over the dev HMR socket |
-| Route (Next 15 / no insights) | Rebuilt from `usePathname()` and `useParams()` |
+| Route (Next 16.3+) | `route` of the request insight Next sends over the dev HMR socket |
+| Route (before 16.3 / no insights) | Rebuilt from `usePathname()` and `useParams()` |
 | Render mode | Next's dev static indicator data, corrected with fetch information |
-| Server time, fetches, server errors | Next 16 request insights |
+| Server time, fetches, server errors | Next 16.3+ request insights |
 | Client errors | `window` `error` and `unhandledrejection` events |
 
 More in [How it works](./architecture).

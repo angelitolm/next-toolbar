@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -38,10 +38,23 @@ test('insightHttpStatus reads the root span', () => {
   assert.equal(insightHttpStatus({ ...traced, spans: [] }), undefined)
 })
 
-test('hmrPath picks endpoint by major version', () => {
+test('hmrPath picks the endpoint by version (/_next/hmr arrived in 16.3)', () => {
   assert.equal(hmrPath('16.3.6'), '/_next/hmr')
+  assert.equal(hmrPath('16.3.0-canary.1'), '/_next/hmr')
+  assert.equal(hmrPath('17.0.0'), '/_next/hmr')
+  assert.equal(hmrPath('16.2.6'), '/_next/webpack-hmr')
+  assert.equal(hmrPath('16.0.10'), '/_next/webpack-hmr')
   assert.equal(hmrPath('15.5.26'), '/_next/webpack-hmr')
   assert.equal(hmrPath(undefined), '/_next/webpack-hmr')
+  assert.equal(alternateHmrPath('/_next/hmr'), '/_next/webpack-hmr')
+  assert.equal(alternateHmrPath('/_next/webpack-hmr'), '/_next/hmr')
+})
+
+test('supportsRequestInsights from 16.3', () => {
+  assert.equal(supportsRequestInsights('16.2.6'), false)
+  assert.equal(supportsRequestInsights('16.3.0'), true)
+  assert.equal(supportsRequestInsights('15.5.26'), false)
+  assert.equal(supportsRequestInsights(undefined), false)
 })
 
 test('parseHmr normalizes Next 15.0, 15.5 and 16 manifest messages', () => {

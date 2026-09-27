@@ -35,7 +35,7 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   // Next's own dev indicator sits bottom-left by default and overlaps the toolbar.
   devIndicators: { position: 'top-right' },
-  // Next 16 only: server timing, fetches, exact route patterns and the profiler.
+  // Next 16.3+ only: server timing, fetches, exact route patterns and the profiler.
   experimental: { requestInsights: true },
 }
 
@@ -45,15 +45,34 @@ export default nextConfig
 Both options are optional:
 
 - Without `devIndicators.position`, Next's round "N" indicator sits on top of the toolbar's left edge. You can also turn it off with `devIndicators: false`.
-- Without `requestInsights` (or on Next 15) the toolbar still shows status, route, render mode, client timing, client errors and versions, but not server timing, fetches, the no-store render-mode correction or the profiler. See [Compatibility](./compatibility).
+- Without `requestInsights` (or before Next 16.3) the toolbar still shows status, route, render mode, client timing, client errors and versions, but not server timing, fetches, the no-store render-mode correction or the profiler. See [Compatibility](./compatibility).
 
-## 4. Add an error boundary
+## 4. Keep it on screen when a page crashes
 
 <Callout type="warning" title="Recommended">
-  If a page throws while rendering and there is no `app/error.tsx`, Next replaces the whole root layout with its fallback, and the toolbar goes with it.
+  If a page throws while rendering and no `error.tsx` catches it, Next replaces the whole root layout with its own error page ("This page couldn't load"), and the toolbar goes with it. That's exactly when you need it most.
 </Callout>
 
-A minimal boundary keeps the layout, and therefore the toolbar, on screen:
+Render the toolbar in `app/global-error.tsx` too. Next uses this file in place of the root layout for uncaught errors, so the toolbar comes back with the status (500), the failing request and its error:
+
+```tsx title="app/global-error.tsx"
+'use client'
+import { NextToolbar } from '@angelitolm/next-toolbar'
+
+export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
+  return (
+    <html lang="en">
+      <body>
+        <h1>Something went wrong</h1>
+        <p>{error.digest ?? error.message}</p>
+        <NextToolbar />
+      </body>
+    </html>
+  )
+}
+```
+
+Optionally, an `app/error.tsx` (or one per route segment, e.g. `app/[locale]/error.tsx`) catches errors *inside* the root layout, so the layout and its toolbar never go away:
 
 ```tsx title="app/error.tsx"
 'use client'

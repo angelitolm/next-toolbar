@@ -23,7 +23,7 @@ export type InsightSpan = {
   error?: { type?: string; message?: string }
 }
 
-// Subset of Next 16's RequestInsight (next/dist/next-devtools/shared/request-insights).
+// Subset of Next 16.3's RequestInsight (next/dist/next-devtools/shared/request-insights).
 export type Insight = {
   requestId: string
   kind?: string
@@ -138,11 +138,27 @@ export type HmrEvent =
   | { kind: 'manifest'; data: Record<string, boolean> }
   | { kind: 'insights'; list: Insight[] }
 
-// Next 16 serves HMR on /_next/hmr, Next 15 on /_next/webpack-hmr.
-export function hmrPath(nextVersion: string | undefined): string {
-  const major = Number.parseInt(nextVersion ?? '', 10)
-  return major >= 16 ? '/_next/hmr' : '/_next/webpack-hmr'
+// "16.3.0-canary.2" -> [16, 3]. Unknown versions parse as [0, 0].
+function majorMinor(version: string | undefined): [number, number] {
+  const [major, minor] = (version ?? '').split('.').map((n) => Number.parseInt(n, 10))
+  return [major || 0, minor || 0]
 }
+
+const atLeast = (version: string | undefined, major: number, minor: number) => {
+  const [a, b] = majorMinor(version)
+  return a > major || (a === major && b >= minor)
+}
+
+// Request insights (experimental.requestInsights) and the /_next/hmr socket both arrived in 16.3.
+export const supportsRequestInsights = (nextVersion: string | undefined) => atLeast(nextVersion, 16, 3)
+
+// Next 16.3+ serves HMR on /_next/hmr; Next 15 and 16.0–16.2 on /_next/webpack-hmr.
+export function hmrPath(nextVersion: string | undefined): string {
+  return supportsRequestInsights(nextVersion) ? '/_next/hmr' : '/_next/webpack-hmr'
+}
+
+// The other endpoint, tried when the expected one refuses the connection (unknown/future versions).
+export const alternateHmrPath = (path: string) => (path === '/_next/hmr' ? '/_next/webpack-hmr' : '/_next/hmr')
 
 // Path prefix Next serves `/_next/` under: assetPrefix, which defaults to basePath.
 // Same derivation as Next's own client (next/dist/client/asset-prefix.js), and the
@@ -257,7 +273,7 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 // Fallback for Next 15 (no request insights): rebuild `/blog/[slug]` from the
 // pathname and useParams(). ponytail: replaces the LAST matching segment, so a
-// param whose value equals a later static segment is mislabeled; insights (Next 16) avoid this.
+// param whose value equals a later static segment is mislabeled; insights (Next 16.3+) avoid this.
 export function routePattern(pathname: string, params: Record<string, string | string[] | undefined> | null): string {
   let out = pathname
   for (const [key, value] of Object.entries(params ?? {})) {

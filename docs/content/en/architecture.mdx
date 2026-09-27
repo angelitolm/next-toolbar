@@ -36,14 +36,14 @@ NextToolbar is one client component with no runtime dependencies besides React a
 The toolbar opens a **second** WebSocket to the same endpoint Next's own client uses. It never sends anything; it only listens for:
 
 - `isrManifest`: a map of path → static, which is what Next's own "Static route" indicator uses;
-- `requestInsightsUpdate`: one request as it progresses (Next 16 with `requestInsights`);
+- `requestInsightsUpdate`: one request as it progresses (Next 16.3+ with `requestInsights`);
 - `sync`: a snapshot of recent requests, sent on connect and after rebuilds.
 
 A client that connects without Next's per-page request id counts as a "legacy" client, which is what makes Next send it the static data. When the dev server restarts, the toolbar reconnects every 2 s.
 
 ### 3. Request insights
 
-With `experimental.requestInsights`, Next 16 records each request as OpenTelemetry-style spans plus fetch metrics and pushes them over the socket. That's where the exact route, server time, fetches, cache outcomes and server errors come from.
+With `experimental.requestInsights`, Next 16.3 records each request as OpenTelemetry-style spans plus fetch metrics and pushes them over the socket. That's where the exact route, server time, fetches, cache outcomes and server errors come from.
 
 ## Rendering
 

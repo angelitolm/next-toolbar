@@ -36,14 +36,14 @@ NextToolbar es un único client component sin dependencias en tiempo de ejecuci�
 La barra abre un **segundo** WebSocket al mismo endpoint que usa el propio cliente de Next. Nunca envía nada; solo escucha:
 
 - `isrManifest`: un mapa de ruta → estática, que es lo que usa el propio indicador "Static route" de Next;
-- `requestInsightsUpdate`: una petición a medida que avanza (Next 16 con `requestInsights`);
+- `requestInsightsUpdate`: una petición a medida que avanza (Next 16.3+ con `requestInsights`);
 - `sync`: una instantánea de las peticiones recientes, enviada al conectar y después de cada recompilación.
 
 Un cliente que se conecta sin el id de petición por página de Next cuenta como cliente "legacy", y eso es lo que hace que Next le envíe los datos estáticos. Cuando el servidor de desarrollo se reinicia, la barra se reconecta cada 2 s.
 
 ### 3. Request insights
 
-Con `experimental.requestInsights`, Next 16 registra cada petición como spans al estilo de OpenTelemetry más métricas de fetch y los envía por el socket. De ahí salen la ruta exacta, el tiempo del servidor, los fetches, los resultados de caché y los errores del servidor.
+Con `experimental.requestInsights`, Next 16.3 registra cada petición como spans al estilo de OpenTelemetry más métricas de fetch y los envía por el socket. De ahí salen la ruta exacta, el tiempo del servidor, los fetches, los resultados de caché y los errores del servidor.
 
 ## Render
 

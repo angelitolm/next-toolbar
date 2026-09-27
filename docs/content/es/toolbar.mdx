@@ -29,10 +29,10 @@ El estado, la ruta y los tiempos siempre describen la **página en la que estás
 |---|---|
 | Estado, TTFB | [Navigation Timing](https://developer.mozilla.org/docs/Web/API/PerformanceNavigationTiming) del navegador (`responseStatus`, `responseStart`) |
 | Estado y `nav` en navegaciones en el cliente | [Resource Timing](https://developer.mozilla.org/docs/Web/API/PerformanceResourceTiming) del navegador para la petición `?_rsc=` |
-| Ruta (Next 16) | `route` de la request insight que Next envía por el HMR socket de desarrollo |
-| Ruta (Next 15 / sin insights) | Reconstruida a partir de `usePathname()` y `useParams()` |
+| Ruta (Next 16.3+) | `route` de la request insight que Next envía por el HMR socket de desarrollo |
+| Ruta (antes de 16.3 / sin insights) | Reconstruida a partir de `usePathname()` y `useParams()` |
 | Modo de render | Datos del indicador estático de desarrollo de Next, corregidos con la información de los fetches |
-| Tiempo del servidor, fetches, errores del servidor | Request insights de Next 16 |
+| Tiempo del servidor, fetches, errores del servidor | Request insights de Next 16.3+ |
 | Errores del cliente | Eventos `error` y `unhandledrejection` de `window` |
 
 Más en [Cómo funciona](./architecture).

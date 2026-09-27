@@ -80,6 +80,9 @@ importers:
 
   packages/next-toolbar:
     devDependencies:
+      '@angelitolm/next-toolbar':
+        specifier: link:C:/dev/next-toolbar/packages/next-toolbar
+        version: 'link:'
       '@types/node':
         specifier: ^22
         version: 22.20.4

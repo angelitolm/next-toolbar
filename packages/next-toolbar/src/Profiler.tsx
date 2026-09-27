@@ -46,7 +46,7 @@ export function Profiler({ insights, selected, onSelect, onClose, onClear, enabl
       </header>
       {!enabled ? (
         <div className="hint">
-          Per-request details need Next.js 16 with <code>experimental: {'{'} requestInsights: true {'}'}</code> in next.config.
+          Per-request details need Next.js 16.3+ with <code>experimental: {'{'} requestInsights: true {'}'}</code> in next.config.
         </div>
       ) : (
         <div className="profiler-body">
