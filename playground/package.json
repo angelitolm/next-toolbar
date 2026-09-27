@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "next dev --port 3100",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "smoke": "node smoke.ts"
   },
   "dependencies": {
     "next": "16.3.6",
