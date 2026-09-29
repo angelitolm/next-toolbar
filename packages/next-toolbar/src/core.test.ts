@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { compareVersions, actionNames, parseRevalidate, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { compareVersions, actionNames, parseRevalidate, parseFetchCacheEntry, indexFetchCache, freshness, pageTags, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -337,7 +337,54 @@ test('parseRevalidate accepts paths and tags, rejects the rest', () => {
   assert.deepEqual(parseRevalidate({ kind: 'path', path: '/blog/hola' }), { kind: 'path', path: '/blog/hola', type: undefined })
   assert.deepEqual(parseRevalidate({ kind: 'path', path: '/', type: 'layout' }), { kind: 'path', path: '/', type: 'layout' })
   assert.deepEqual(parseRevalidate({ kind: 'tag', tag: ' posts ' }), { kind: 'tag', tag: 'posts' })
-  for (const bad of [null, {}, { kind: 'path', path: 'blog' }, { kind: 'path', path: '/', type: 'all' }, { kind: 'tag', tag: '' }, { kind: 'tag', tag: 'x'.repeat(257) }, { kind: 'tag', tag: 1 }]) {
+  assert.deepEqual(parseRevalidate({ kind: 'tags', tags: ['products', ' catalog', 'products'] }), { kind: 'tags', tags: ['products', 'catalog'] })
+  const tooMany = Array.from({ length: 129 }, (_, i) => `t${i}`)
+  for (const bad of [null, {}, { kind: 'path', path: 'blog' }, { kind: 'path', path: '/', type: 'all' }, { kind: 'tag', tag: '' }, { kind: 'tag', tag: 'x'.repeat(257) }, { kind: 'tag', tag: 1 }, { kind: 'tags', tags: [] }, { kind: 'tags', tags: ['ok', ''] }, { kind: 'tags', tags: 'products' }, { kind: 'tags', tags: tooMany }]) {
     assert.ok('error' in parseRevalidate(bad), JSON.stringify(bad))
   }
+})
+
+// Shape of a .next/dev/cache/fetch-cache file in Next 16.3.6.
+const cacheFile = (url: string, extra: Record<string, unknown> = {}) => ({ kind: 'FETCH', data: { headers: {}, body: 'e30=', status: 200, url }, revalidate: 60, tags: [], ...extra })
+
+test('parseFetchCacheEntry keeps user tags, drops implicit route tags, normalizes revalidate', () => {
+  assert.deepEqual(parseFetchCacheEntry(cacheFile('https://api/p', { tags: ['products', '_N_T_/layout', '_N_T_/es/products', 7] }), 5), {
+    url: 'https://api/p',
+    tags: ['products'],
+    revalidate: 60,
+    storedAt: 5,
+  })
+  assert.equal(parseFetchCacheEntry(cacheFile('u', { revalidate: false }), 0)?.revalidate, undefined)
+  assert.equal(parseFetchCacheEntry(cacheFile('u', { revalidate: 31_536_000 }), 0)?.revalidate, undefined)
+  for (const bad of [null, 'x', { kind: 'PAGE', data: { url: 'u' } }, { kind: 'FETCH', data: {} }, { kind: 'FETCH' }]) {
+    assert.equal(parseFetchCacheEntry(bad, 0), undefined, JSON.stringify(bad))
+  }
+})
+
+test('indexFetchCache keeps the newest entry per URL', () => {
+  const index = indexFetchCache([
+    { url: 'a', tags: ['old'], storedAt: 1 },
+    { url: 'a', tags: ['new'], storedAt: 2 },
+    { url: 'b', tags: [], storedAt: 1 },
+  ])
+  assert.deepEqual(index.a.tags, ['new'])
+  assert.deepEqual(Object.keys(index), ['a', 'b'])
+})
+
+test('freshness follows revalidate from the time the entry was stored', () => {
+  const entry = { url: 'a', tags: [], revalidate: 60, storedAt: 1_000_000 }
+  assert.deepEqual(freshness(entry, 1_000_000 + 15_000), { state: 'fresh', seconds: 45 })
+  assert.deepEqual(freshness(entry, 1_000_000 + 60_000), { state: 'stale', seconds: 0 })
+  assert.deepEqual(freshness(entry, 1_000_000 + 90_000), { state: 'stale', seconds: 30 })
+  assert.deepEqual(freshness({ ...entry, revalidate: undefined }, 0), { state: 'forever' })
+})
+
+test('pageTags lists distinct tags of the page fetches, in fetch order', () => {
+  const cache = indexFetchCache([
+    { url: 'https://api/products', tags: ['products', 'catalog'], storedAt: 1 },
+    { url: 'https://api/categories', tags: ['categories', 'catalog'], storedAt: 1 },
+  ])
+  const fetches = [{ url: 'https://api/products' }, { url: 'https://api/categories' }, { url: 'https://api/uncached' }, {}]
+  assert.deepEqual(pageTags(fetches, cache), ['products', 'catalog', 'categories'])
+  assert.deepEqual(pageTags(fetches, {}), [])
 })

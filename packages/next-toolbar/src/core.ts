@@ -664,19 +664,83 @@ export function actionNames(manifests: unknown[]): Record<string, ActionName> {
   return out
 }
 
-export type RevalidateRequest = { kind: 'path'; path: string; type?: 'page' | 'layout' } | { kind: 'tag'; tag: string }
+// ── Data cache (fetch-cache entries on disk) ──────────────────────────────────
+
+// What Next's file-system cache knows about a cached fetch. Request insights carry the fetch's URL
+// and cache status but not its tags or revalidate, so the server route reads them from disk and
+// the toolbar joins the two by URL.
+export type CachedFetch = {
+  url: string
+  /** Tags from `next: { tags }`, without Next's implicit `_N_T_` route tags. */
+  tags: string[]
+  /** Seconds; undefined when the entry never expires on its own (force-cache). */
+  revalidate?: number
+  /** When the entry was written: the file's mtime, which is what Next compares against. */
+  storedAt: number
+}
+
+// Next writes `revalidate: false` or a one-year CACHE_ONE_YEAR for force-cache.
+const NEVER_EXPIRES = 31_536_000
+
+// One .next/(dev/)cache/fetch-cache/<key> file. Undefined for anything that isn't a fetch entry.
+export function parseFetchCacheEntry(json: unknown, mtimeMs: number): CachedFetch | undefined {
+  const entry = json as { kind?: unknown; data?: { url?: unknown }; tags?: unknown; revalidate?: unknown } | null
+  if (entry?.kind !== 'FETCH' || typeof entry.data?.url !== 'string') return undefined
+  const tags = Array.isArray(entry.tags) ? entry.tags.filter((t): t is string => typeof t === 'string' && !t.startsWith('_N_T_')) : []
+  const revalidate = typeof entry.revalidate === 'number' && entry.revalidate > 0 && entry.revalidate < NEVER_EXPIRES ? entry.revalidate : undefined
+  return { url: entry.data.url, tags, revalidate, storedAt: mtimeMs }
+}
+
+// url -> newest entry. The same URL can have several entries (different headers or bodies);
+// the newest is the one the last render wrote or read.
+// ponytail: joins by URL only, so two fetches of one URL with different tags show the newest one's.
+export function indexFetchCache(entries: CachedFetch[]): Record<string, CachedFetch> {
+  const out: Record<string, CachedFetch> = {}
+  for (const e of entries) if (!out[e.url] || e.storedAt > out[e.url].storedAt) out[e.url] = e
+  return out
+}
+
+export type Freshness = { state: 'fresh' | 'stale' | 'forever'; /** Seconds until stale, or since. */ seconds?: number }
+
+// Same rule as Next's cache: stale once `revalidate` seconds have passed since it was stored.
+export function freshness(entry: CachedFetch, now: number): Freshness {
+  if (entry.revalidate === undefined) return { state: 'forever' }
+  const left = Math.round((entry.storedAt + entry.revalidate * 1000 - now) / 1000)
+  return left > 0 ? { state: 'fresh', seconds: left } : { state: 'stale', seconds: Math.abs(left) }
+}
+
+// Distinct tags of the page's fetches, in fetch order: what can be revalidated from here.
+export function pageTags(fetches: InsightFetch[], cache: Record<string, CachedFetch>): string[] {
+  const out = new Set<string>()
+  for (const f of fetches) for (const t of (f.url && cache[f.url]?.tags) || []) out.add(t)
+  return [...out]
+}
+
+export type RevalidateRequest =
+  | { kind: 'path'; path: string; type?: 'page' | 'layout' }
+  | { kind: 'tag'; tag: string }
+  // Every tag of one fetch, in one request and one page refresh.
+  | { kind: 'tags'; tags: string[] }
+
+// Next caps tags at 256 characters, and a fetch at 128 tags.
+const validTag = (tag: unknown): tag is string => typeof tag === 'string' && tag.trim() !== '' && tag.length <= 256
+const MAX_TAGS = 128
 
 // Validates a POST body before it reaches revalidatePath / revalidateTag.
-// Next caps tags at 256 characters.
 export function parseRevalidate(body: unknown): RevalidateRequest | { error: string } {
   const b = (body ?? {}) as Record<string, unknown>
   if (b.kind === 'tag') {
-    return typeof b.tag === 'string' && b.tag.trim() && b.tag.length <= 256 ? { kind: 'tag', tag: b.tag.trim() } : { error: 'tag must be a non-empty string of up to 256 characters' }
+    return validTag(b.tag) ? { kind: 'tag', tag: b.tag.trim() } : { error: 'tag must be a non-empty string of up to 256 characters' }
+  }
+  if (b.kind === 'tags') {
+    return Array.isArray(b.tags) && b.tags.length > 0 && b.tags.length <= MAX_TAGS && b.tags.every(validTag)
+      ? { kind: 'tags', tags: [...new Set(b.tags.map((t: string) => t.trim()))] }
+      : { error: `tags must be 1 to ${MAX_TAGS} non-empty strings of up to 256 characters` }
   }
   if (b.kind === 'path') {
     if (typeof b.path !== 'string' || !b.path.startsWith('/') || b.path.length > 1024) return { error: 'path must start with /' }
     if (b.type !== undefined && b.type !== 'page' && b.type !== 'layout') return { error: "type must be 'page' or 'layout'" }
     return { kind: 'path', path: b.path, type: b.type }
   }
-  return { error: "kind must be 'path' or 'tag'" }
+  return { error: "kind must be 'path', 'tag' or 'tags'" }
 }
