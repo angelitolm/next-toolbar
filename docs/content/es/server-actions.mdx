@@ -1,0 +1,47 @@
+Cada llamada a una Server Action desde la página aparece en la barra: si funcionó, cuánto tardó, si pidió al router que descartara datos en caché y adónde redirigió. Un botón **Refresh page** vuelve a renderizar la ruta actual en el servidor, sin recargar.
+
+## Qué ves
+
+Un segmento con un rayo y el número de llamadas desde que se cargó la página. Se pone en rojo cuando alguna falló.
+
+Pasa el ratón por encima para ver la lista, de la más reciente a la más antigua:
+
+| Columna | Qué muestra |
+|---|---|
+| **Action** | El principio del id de la action y la página desde la que se llamó. Pasa el ratón por una fila para ver el id completo. |
+| **Status** | Estado HTTP de la respuesta de la action, `failed` cuando falló la propia petición (red, cancelada), `…` mientras se ejecuta. Un `throw` dentro de la action es un `500`. |
+| **Time** | Hasta que llegaron las cabeceras de la respuesta. El resultado de la action llega en streaming después. |
+| **Revalidated** | Qué pidió la action al router del cliente que invalidara (abajo), y `→ /ruta` cuando redirigió. |
+
+La lista vive en el navegador: sobrevive a las navegaciones en el cliente y se pierde al recargar la página. **Clear** la vacía.
+
+<Callout type="tip">
+  La [demo en vivo](./demo) muestra tres llamadas en el escenario "Cuenta", una de ellas fallida.
+</Callout>
+
+### Revalidated
+
+| Valor | Significado | Lo provoca |
+|---|---|---|
+| **static + dynamic** | El router descarta todos sus datos en caché, también los estáticos. | `revalidatePath`, `updateTag`, crear o borrar una cookie. |
+| **dynamic only** | El router vuelve a pedir solo los datos dinámicos. | `refresh()` |
+| **—** | Nada que invalidar. | Sin revalidación, o `revalidateTag` con un perfil de caché (ver abajo). |
+
+<Callout type="warning">
+  En Next.js 16, `revalidateTag(tag, profile)` es stale-while-revalidate: la siguiente visita recibe los datos antiguos mientras se piden los nuevos. Next no se lo comunica al cliente, así que la columna muestra **—** aunque el tag se revalidó en el servidor.
+</Callout>
+
+## Refresh page
+
+Llama a `router.refresh()`: Next vuelve a renderizar la ruta actual en el servidor y mezcla el resultado con la página, conservando el estado del cliente (inputs, scroll, `useState`). No vacía la caché de datos: las llamadas `fetch` en caché y las entradas de `'use cache'` se reutilizan. Sirve para ver la página después de cambiar datos fuera de la app (una base de datos, un CMS).
+
+## De dónde salen los datos
+
+Las Server Actions son peticiones `POST` con una cabecera `next-action` que lleva el id de la action. La barra envuelve `window.fetch` mientras está montada (solo en `next dev`) y registra las peticiones que llevan esa cabecera. La respuesta llega a Next intacta: la barra solo lee su estado y dos cabeceras, `x-action-revalidated` y `x-action-redirect`. Lee los dos formatos: un número en Next.js 16 y una tupla `[paths, tag, cookie]` en Next.js 15.
+
+## Qué no hace
+
+- **No muestra el nombre de la action**, solo el id. El navegador nunca ve el nombre; la relación entre id y función vive en el servidor (`.next/server/server-reference-manifest.json`). Las request insights tampoco lo traen.
+- **No muestra tags ni rutas**: Next solo manda al cliente un indicador, no qué tags o rutas se revalidaron.
+- **No muestra argumentos ni valores devueltos.** Viajan en el formato propio de React en el cuerpo de la petición y de la respuesta, que la barra no lee.
+- No ve las actions llamadas desde otras pestañas, ni las que usan un `fetch` que no sea el global.

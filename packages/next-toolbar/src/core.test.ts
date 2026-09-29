@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { compareVersions, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { compareVersions, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -251,4 +251,27 @@ test('seoIssues flags missing, too long, noindex, broken og:image and bad JSON-L
   assert.match(bad[0].message, /61 characters/)
   // Length counts characters, not UTF-16 units.
   assert.equal(seoIssues({ ...good, title: '😀'.repeat(60) }).length, 1)
+})
+
+test('parseActionRevalidated reads Next 16 numbers and Next 15 tuples', () => {
+  assert.equal(parseActionRevalidated(null), 'none')
+  assert.equal(parseActionRevalidated('0'), 'none')
+  assert.equal(parseActionRevalidated('1'), 'all')
+  assert.equal(parseActionRevalidated('2'), 'dynamic')
+  assert.equal(parseActionRevalidated('[[],0,0]'), 'none')
+  assert.equal(parseActionRevalidated('[[],1,0]'), 'all')
+  assert.equal(parseActionRevalidated('[[],0,1]'), 'all')
+  assert.equal(parseActionRevalidated('[["/blog"],0,0]'), 'all')
+  assert.equal(parseActionRevalidated('nope'), undefined)
+  assert.equal(parseActionRevalidated('7'), undefined)
+})
+
+test('parseActionRedirect and actionFailed', () => {
+  assert.equal(parseActionRedirect('/blog/hola;push'), '/blog/hola')
+  assert.equal(parseActionRedirect(null), undefined)
+  const call = { id: 'a', actionId: 'x', page: '/', startTime: 0 }
+  assert.equal(actionFailed(call), false) // pending
+  assert.equal(actionFailed({ ...call, status: 200 }), false)
+  assert.equal(actionFailed({ ...call, status: 500 }), true)
+  assert.equal(actionFailed({ ...call, error: 'Failed to fetch' }), true)
 })

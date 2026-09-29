@@ -50,6 +50,10 @@
       "title": "Fetch cache",
       "description": "HIT, HMR, MISS and SKIP, the hit rate and the cache reasons."
     },
+    "server-actions": {
+      "title": "Server Actions",
+      "description": "Every action call from the page: status, time, what it revalidated and where it redirected. Plus a Refresh button."
+    },
     "seo": {
       "title": "SEO",
       "description": "The metadata that actually reached the page, and what search engines and link previews trip over."
@@ -90,6 +94,7 @@
       "hover": "Hover (or Tab to) any segment of the bar to open its panel.",
       "profiler": "Click the request id (#) to open the profiler: every request, its fetches and a render timeline.",
       "errors": "In the 500 scenario, open the errors panel and click Details.",
+      "actions": "In \"Account\", hover the lightning: three Server Action calls, one of them failed. Clear empties the list.",
       "seo": "In \"Blog post\", hover the SEO segment: a title that's too long, no description and an og:image that returns 404.",
       "security": "In \"Outdated Next.js\", hover the red shield: known vulnerabilities of 16.2.6 and the version to upgrade to.",
       "minimize": "Minimize it with the logo or the close button, then click the circle.",

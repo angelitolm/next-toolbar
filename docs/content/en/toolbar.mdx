@@ -17,10 +17,13 @@ The toolbar is a full-width strip floating 16 px above the bottom of the window.
 | 6 | **Timing** | `server`: server render time. `TTFB`: time to first byte of a full load. `nav`: duration of a client navigation's RSC request | Each value, and a hint to enable request insights if they're off |
 | 7 | **Fetch** | Server `fetch` calls and cache hit rate. Only with request insights | Cache summary and every fetch. See [Fetch cache](./fetch-cache) |
 | 8 | **Errors** | Client errors + server error of this page. Red when > 0 | Server errors (click → profiler) and client errors (expand → stack) |
-| 9 | **SEO** | Magnifier and the number of metadata problems: red with errors, amber with warnings only | title, description, canonical, og:image, robots, JSON-LD and each finding. See [SEO](./seo) |
-| 10 | **Next** | Installed Next.js version | React version, request insights on/off, HMR socket connected/disconnected |
-| 11 | **Theme** | Current theme | Click cycles system → light → dark |
-| 12 | **Minimize** | Close icon | Collapses the toolbar to a circle |
+| 9 | **Actions** | Lightning and the number of Server Action calls. Red when one failed | Each call: status, time, what it revalidated, redirect; **Refresh page** and **Clear**. See [Server Actions](./server-actions) |
+| 10 | **SEO** | Magnifier and the number of metadata problems: red with errors, amber with warnings only | title, description, canonical, og:image, robots, JSON-LD and each finding. See [SEO](./seo) |
+| 11 | **Next** | Installed Next.js version | React version, request insights on/off, HMR socket connected/disconnected |
+| 12 | **Theme** | Current theme | Click cycles system → light → dark |
+| 13 | **Minimize** | Close icon | Collapses the toolbar to a circle |
+
+Segments added in the latest release wear a **new** badge until you open them once; the toolbar remembers that per browser (`localStorage`, `next-toolbar:seen`).
 
 The status, route and timing always describe the **page you're on**. When you navigate client-side, the toolbar switches to the new page's data as soon as its RSC request finishes.
 

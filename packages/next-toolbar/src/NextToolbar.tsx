@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { useParams, usePathname } from 'next/navigation'
-import { type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
-import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Hashtag, Monitor, Moon, Refresh2, Routing2, SearchNormal1, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
+import { useParams, usePathname, useRouter } from 'next/navigation'
+import { type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
+import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Flash, Hashtag, Monitor, Moon, Refresh2, Routing2, SearchNormal1, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { VERSION } from './version'
 import { CachePill, CacheSummary, Profiler } from './Profiler'
@@ -18,6 +18,11 @@ export type Timing = { status?: number; ms: number; via: 'document' | 'rsc' }
 
 const STORAGE_KEY = 'next-toolbar:collapsed'
 const THEME_KEY = 'next-toolbar:theme'
+const SEEN_KEY = 'next-toolbar:seen'
+
+// Segments added in the current minor: they wear a "new" badge until first opened.
+// ponytail: edit by hand on each release that adds a segment.
+const NEW_SEGMENTS = ['actions', 'seo']
 
 export type Theme = 'system' | 'light' | 'dark'
 
@@ -52,12 +57,16 @@ function Toolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securit
   const [visits, setVisits] = useVisits(pathname, routePattern(pathname, params), timing)
   const [security, refreshSecurity] = useSecurity(nextVersion, securityCheck)
   const seo = useSeo(pathname)
+  const [actions, setActions] = useServerActions()
+  const router = useRouter()
 
   return (
     <ToolbarView
       defaultTheme={defaultTheme}
-      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo }}
+      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo, actions }}
       onRefreshSecurity={refreshSecurity}
+      onRefreshPage={() => router.refresh()}
+      onClearActions={() => setActions([])}
       onClear={(keepId) => {
         clear(keepId)
         setErrors([])
@@ -86,6 +95,8 @@ export type ToolbarData = {
   security: SecurityState
   /** Page metadata as resolved in the document. Omit to hide the SEO segment. */
   seo?: SeoState
+  /** Server Actions called since the page loaded, newest first. Omit to hide the segment. */
+  actions?: ActionCall[]
 }
 
 export type SeoState = {
@@ -102,14 +113,23 @@ export type SecurityState = {
   partial?: boolean
 }
 
-type ViewProps = { data: ToolbarData; defaultTheme: Theme; onClear: (keepId?: string) => void; onRefreshSecurity?: () => void }
+type ViewProps = {
+  data: ToolbarData
+  defaultTheme: Theme
+  onClear: (keepId?: string) => void
+  onRefreshSecurity?: () => void
+  /** router.refresh(): re-renders the current route on the server. */
+  onRefreshPage?: () => void
+  onClearActions?: () => void
+}
 
-export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity }: ViewProps) {
-  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo } = data
+export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, onRefreshPage, onClearActions }: ViewProps) {
+  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo, actions } = data
   const root = useShadowRoot()
   const [collapsed, setCollapsed] = useState(false)
   const [profiler, setProfiler] = useState<{ open: boolean; id?: string }>({ open: false })
   const closeProfiler = useCallback(() => setProfiler((p) => ({ ...p, open: false })), [])
+  const [isNew, markSeen] = useNewSegments()
 
   const [theme, setTheme] = useState<Theme>(defaultTheme)
 
@@ -311,7 +331,8 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity }: 
         ))}
       </Segment>
 
-      {seo && <SeoSegment seo={seo} />}
+      {actions && <ActionsSegment calls={actions} onRefreshPage={onRefreshPage} onClear={onClearActions} isNew={isNew('actions')} onOpen={() => markSeen('actions')} />}
+      {seo && <SeoSegment seo={seo} isNew={isNew('seo')} onOpen={() => markSeen('seo')} />}
 
       {security.status !== 'off' && <SecuritySegment security={security} nextVersion={nextVersion} onRefresh={onRefreshSecurity} />}
 
@@ -379,10 +400,21 @@ const themeIcons: Record<Theme, ReactNode> = {
 
 const nextTheme: Record<Theme, Theme> = { system: 'light', light: 'dark', dark: 'system' }
 
-function Segment({ label, children, className = '' }: { label: ReactNode; children: ReactNode; className?: string }) {
+type SegmentProps = {
+  label: ReactNode
+  children: ReactNode
+  className?: string
+  /** Show the "new" badge. */
+  isNew?: boolean
+  /** Called when the panel opens (hover or focus). */
+  onOpen?: () => void
+}
+
+function Segment({ label, children, className = '', isNew, onOpen }: SegmentProps) {
   return (
-    <div className={`seg ${className}`} tabIndex={0}>
+    <div className={`seg ${className} ${isNew ? 'is-new' : ''}`} tabIndex={0} onMouseEnter={onOpen} onFocus={onOpen}>
       {label}
+      {isNew && <span className="new-badge">new</span>}
       <div className="panel">{children}</div>
     </div>
   )
@@ -395,6 +427,32 @@ function Row({ k, children }: { k: string; children: ReactNode }) {
       <span>{children}</span>
     </div>
   )
+}
+
+// Which NEW_SEGMENTS the user already opened, remembered per browser. Nothing counts as new
+// until localStorage is read, so badges don't flash on reload.
+function useNewSegments() {
+  const [seen, setSeen] = useState<string[] | null>(null)
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SEEN_KEY) ?? '[]')
+      setSeen(Array.isArray(saved) ? saved : [])
+    } catch {
+      setSeen([])
+    }
+  }, [])
+  const markSeen = useCallback((key: string) => {
+    setSeen((s) => {
+      if (!s || s.includes(key)) return s
+      const next = [...s, key]
+      try {
+        localStorage.setItem(SEEN_KEY, JSON.stringify(next))
+      } catch {}
+      return next
+    })
+  }, [])
+  const isNew = (key: string) => seen !== null && NEW_SEGMENTS.includes(key) && !seen.includes(key)
+  return [isNew, markSeen] as const
 }
 
 // Isolates toolbar CSS from the app (and vice versa).
@@ -738,7 +796,7 @@ function useSeo(pathname: string): SeoState | undefined {
   return data && { data, ogImageStatus }
 }
 
-function SeoSegment({ seo: { data, ogImageStatus } }: { seo: SeoState }) {
+function SeoSegment({ seo: { data, ogImageStatus }, isNew, onOpen }: { seo: SeoState; isNew?: boolean; onOpen?: () => void }) {
   const issues = seoIssues(data, ogImageStatus)
   const problems = issues.filter((i) => i.level !== 'ok').length
   const tone = issues.some((i) => i.level === 'err') ? 'err' : problems ? 'warn' : ''
@@ -746,7 +804,7 @@ function SeoSegment({ seo: { data, ogImageStatus } }: { seo: SeoState }) {
   const unset = <span className="dim">not set</span>
 
   return (
-    <Segment className="seo" label={<><SearchNormal1 className={`ico ${tone ? `ico-${tone}` : ''}`} /><span className="dim hide-md">SEO</span><span className={`count ${tone}`}>{problems}</span></>}>
+    <Segment className="seo" isNew={isNew} onOpen={onOpen} label={<><SearchNormal1 className={`ico ${tone ? `ico-${tone}` : ''}`} /><span className="dim hide-md">SEO</span><span className={`count ${tone}`}>{problems}</span></>}>
       <div className="sec-head">
         <b>Page metadata</b>
         <span className="dim">Read from the document after each navigation.</span>
@@ -766,6 +824,124 @@ function SeoSegment({ seo: { data, ogImageStatus } }: { seo: SeoState }) {
         <div key={i} className="issue">
           <span className={`issue-dot ${issue.level}`} />
           <span>{issue.message}</span>
+        </div>
+      ))}
+    </Segment>
+  )
+}
+
+const MAX_ACTIONS = 50
+
+// Server Actions are POSTs that carry a `next-action` header, sent with the global fetch
+// (next/dist/client/components/router-reducer/reducers/server-action-reducer.js).
+// Wrapping window.fetch sees each call without touching Next. The response is returned
+// untouched: only its headers are read.
+function useServerActions() {
+  const [calls, setCalls] = useState<ActionCall[]>([])
+  useEffect(() => {
+    const original = window.fetch
+    let seq = 0
+    const wrapped: typeof fetch = async (input, init) => {
+      const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
+      const actionId = headers.get('next-action')
+      if (!actionId) return original(input, init)
+
+      const id = `a${++seq}`
+      const t0 = performance.now()
+      const update = (patch: Partial<ActionCall>) => setCalls((c) => c.map((call) => (call.id === id ? { ...call, ...patch } : call)))
+      setCalls((c) => [{ id, actionId, page: stripBasePath(location.pathname, BASE_PATH), startTime: Date.now() }, ...c].slice(0, MAX_ACTIONS))
+      try {
+        const res = await original(input, init)
+        update({
+          durationMs: performance.now() - t0,
+          status: res.status,
+          revalidation: parseActionRevalidated(res.headers.get('x-action-revalidated')),
+          redirect: parseActionRedirect(res.headers.get('x-action-redirect')),
+        })
+        return res
+      } catch (e) {
+        update({ durationMs: performance.now() - t0, error: e instanceof Error ? e.message : String(e) })
+        throw e
+      }
+    }
+    window.fetch = wrapped
+    return () => {
+      // Someone else may have wrapped fetch after us; leave theirs in place.
+      if (window.fetch === wrapped) window.fetch = original
+    }
+  }, [])
+  return [calls, setCalls] as const
+}
+
+const revalidationLabel = { none: '—', all: 'static + dynamic', dynamic: 'dynamic only' } as const
+
+function ActionsSegment({
+  calls,
+  onRefreshPage,
+  onClear,
+  isNew,
+  onOpen,
+}: {
+  calls: ActionCall[]
+  onRefreshPage?: () => void
+  onClear?: () => void
+  isNew?: boolean
+  onOpen?: () => void
+}) {
+  const failed = calls.some(actionFailed)
+  return (
+    <Segment
+      className="actions"
+      isNew={isNew}
+      onOpen={onOpen}
+      label={<><Flash className={`ico ${failed ? 'ico-err' : ''}`} /><span className="dim hide-md">actions</span><span className={`count ${failed ? 'err' : ''}`}>{calls.length}</span></>}
+    >
+      <div className="act-head">
+        <div className="sec-head">
+          <b>Server Actions</b>
+          <span className="dim">Calls since the page loaded, newest first.</span>
+        </div>
+        {onRefreshPage && (
+          <button className="text-btn" onClick={onRefreshPage} title="router.refresh(): render this route again on the server">
+            <Refresh2 size={14} />
+            Refresh page
+          </button>
+        )}
+        {onClear && calls.length > 0 && (
+          <button className="text-btn" onClick={onClear}>
+            Clear
+          </button>
+        )}
+      </div>
+      {calls.length === 0 && <div className="hint">No calls yet. Server Actions called from the page show up here.</div>}
+      {calls.length > 0 && (
+        <div className="act-row act-cols dim">
+          <span>Action</span>
+          <span>Status</span>
+          <span>Time</span>
+          <span>Revalidated</span>
+        </div>
+      )}
+      {calls.map((call) => (
+        <div key={call.id} className="act-row" title={`Action id ${call.actionId}
+Called from ${call.page}`}>
+          <span className="act-id">
+            <code>{call.actionId.slice(0, 10)}…</code>
+            <span className="dim">{call.page}</span>
+          </span>
+          <span>
+            {call.durationMs === undefined ? (
+              <span className="dim">…</span>
+            ) : (
+              <span className={`pill ${actionFailed(call) ? 'err' : 'ok'}`}>{call.error ? 'failed' : call.status}</span>
+            )}
+          </span>
+          <span className="dim">{call.durationMs !== undefined && ms(call.durationMs)}</span>
+          <span>
+            {call.revalidation ? revalidationLabel[call.revalidation] : call.durationMs === undefined ? '' : '?'}
+            {call.redirect && <span className="dim"> → {call.redirect}</span>}
+            {call.error && <span className="dim"> {call.error}</span>}
+          </span>
         </div>
       ))}
     </Segment>

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { NextToolbar } from '@angelitolm/next-toolbar'
 
-const links = ['/', '/dynamic', '/isr', '/cache', '/blog/hola', '/boom', '/nope', '/client-error']
+const links = ['/', '/dynamic', '/isr', '/cache', '/blog/hola', '/boom', '/nope', '/client-error', '/actions']
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

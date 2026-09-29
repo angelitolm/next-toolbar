@@ -1,4 +1,4 @@
-import type { Advisory, ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
+import type { ActionCall, Advisory, ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
 
 // Fixed clock so server and client render the same data.
 const T0 = Date.UTC(2026, 8, 27, 10, 0, 0)
@@ -133,6 +133,13 @@ const BLOG_SEO: NonNullable<NextToolbarDemoProps['seo']> = {
   jsonLd: ['{"@context":"https://schema.org","@type":"BlogPosting","headline":"Hello world"}'],
 }
 
+// Newest first, as the toolbar records them.
+const ACCOUNT_ACTIONS: ActionCall[] = [
+  { id: 'c3', actionId: '40f1c9a7e2b84d0c6a5e3f1b9d7c2a8e4f6b0d3c19', page: '/account', startTime: T0 - 20_000, durationMs: 912, status: 500, revalidation: 'none' },
+  { id: 'c2', actionId: '00a8d3e61f5c7b9204e8a6c1d3f5b7092e4c6a8b1d', page: '/account', startTime: T0 - 45_000, durationMs: 38, status: 200, revalidation: 'dynamic' },
+  { id: 'c1', actionId: '7f3a2c9d1e5b8a4c6f0e2d7b9a1c3e5f8d0b2a4c6e', page: '/account', startTime: T0 - 90_000, durationMs: 124, status: 200, revalidation: 'all' },
+]
+
 export type ScenarioId = 'home' | 'blog' | 'dashboard' | 'account' | 'checkout' | 'notFound' | 'settings' | 'outdated'
 
 export const SCENARIOS: { id: ScenarioId; props: NextToolbarDemoProps }[] = [
@@ -143,7 +150,7 @@ export const SCENARIOS: { id: ScenarioId; props: NextToolbarDemoProps }[] = [
   },
   // Next's dev data says static; the no-store fetch makes the toolbar report Dynamic, like `next build`.
   { id: 'dashboard', props: { pathname: '/dashboard', status: 200, timingMs: 251, via: 'rsc', isStatic: true, insights: ALL, advisories: [] } },
-  { id: 'account', props: { pathname: '/account', status: 200, timingMs: 44, via: 'rsc', isStatic: false, insights: ALL, advisories: [] } },
+  { id: 'account', props: { pathname: '/account', status: 200, timingMs: 44, via: 'rsc', isStatic: false, insights: ALL, advisories: [], actions: ACCOUNT_ACTIONS } },
   { id: 'checkout', props: { pathname: '/checkout', status: 500, timingMs: 3030, isStatic: true, insights: ALL, advisories: [] } },
   { id: 'notFound', props: { pathname: '/pricing/enterprise', status: 404, timingMs: 31, isStatic: true, insights: ALL, advisories: [] } },
   { id: 'settings', props: { pathname: '/settings', status: 200, timingMs: 35, via: 'rsc', isStatic: true, insights: ALL, clientErrors: [clientError], advisories: [] } },

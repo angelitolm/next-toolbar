@@ -530,3 +530,52 @@ export function seoIssues(seo: SeoData, ogImageStatus?: number): SeoIssue[] {
   else if (seo.jsonLd.length) issues.push({ level: 'ok', message: 'JSON-LD parses.' })
   return issues
 }
+
+// ── Server Actions ────────────────────────────────────────────────────────────
+
+// What the action told the client router to throw away, from `x-action-revalidated`.
+// 'all': static and dynamic data (updateTag, revalidatePath, cookies set...); 'dynamic': refresh().
+export type ActionRevalidation = 'none' | 'all' | 'dynamic'
+
+export type ActionCall = {
+  /** Unique per call. */
+  id: string
+  /** Server reference id Next sends in the `next-action` header. */
+  actionId: string
+  /** Page the action was called from, without basePath. */
+  page: string
+  startTime: number
+  /** Until the response headers arrived; undefined while pending. */
+  durationMs?: number
+  status?: number
+  /** The request itself failed (network, aborted). */
+  error?: string
+  revalidation?: ActionRevalidation
+  redirect?: string
+}
+
+// Next 16: a number (0 none, 1 static and dynamic, 2 dynamic only), header absent when 0.
+// Next 15: `[[paths], tagRevalidated, cookieRevalidated]`, always sent.
+// Undefined when the header can't be read.
+export function parseActionRevalidated(header: string | null): ActionRevalidation | undefined {
+  if (header === null) return 'none'
+  let value: unknown
+  try {
+    value = JSON.parse(header)
+  } catch {
+    return undefined
+  }
+  if (value === 0) return 'none'
+  if (value === 1) return 'all'
+  if (value === 2) return 'dynamic'
+  if (Array.isArray(value)) {
+    const [paths, tag, cookie] = value
+    return (Array.isArray(paths) && paths.length) || tag || cookie ? 'all' : 'none'
+  }
+  return undefined
+}
+
+// `x-action-redirect` is "<url>;push" or "<url>;replace".
+export const parseActionRedirect = (header: string | null) => header?.split(';')[0] || undefined
+
+export const actionFailed = (call: ActionCall) => call.error !== undefined || (call.status !== undefined && call.status >= 400)

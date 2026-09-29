@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Advisory, Insight, SeoData } from './core'
+import type { ActionCall, Advisory, Insight, SeoData } from './core'
 import { ToolbarView, type ClientError, type Theme } from './NextToolbar'
 
 export type NextToolbarDemoProps = {
@@ -24,6 +24,8 @@ export type NextToolbarDemoProps = {
   seo?: SeoData
   /** Status of the og:image, as the live toolbar gets it from a HEAD request. */
   ogImageStatus?: number
+  /** Server Actions called from the page, newest first. Omit to hide the segment. */
+  actions?: ActionCall[]
 }
 
 const NONE: never[] = []
@@ -46,10 +48,13 @@ export function NextToolbarDemo({
   advisories,
   seo,
   ogImageStatus,
+  actions,
 }: NextToolbarDemoProps) {
   // Clear works like the live toolbar: drop everything but the current page's request, and client errors.
   const [cleared, setCleared] = useState<{ keep?: string } | null>(null)
+  const [actionsCleared, setActionsCleared] = useState(false)
   useEffect(() => setCleared(null), [insights, clientErrors])
+  useEffect(() => setActionsCleared(false), [actions])
 
   const map = useMemo(
     () => new Map(insights.filter((i) => !cleared || i.requestId === cleared.keep).map((i) => [i.requestId, i])),
@@ -73,9 +78,11 @@ export function NextToolbarDemo({
         visits: NONE,
         errorLog: NONE,
         seo: seo && { data: seo, ogImageStatus },
+        actions: actions && (actionsCleared ? NONE : actions),
         security: advisories ? { status: 'ok', advisories, checkedAt: Date.now() } : { status: 'off', advisories: NONE },
       }}
       onClear={(keep) => setCleared({ keep })}
+      onClearActions={() => setActionsCleared(true)}
     />
   )
 }

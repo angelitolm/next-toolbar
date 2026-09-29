@@ -1,0 +1,47 @@
+Every Server Action call from the page shows up in the toolbar: whether it worked, how long it took, whether it told the router to throw away cached data, and where it redirected. A **Refresh page** button renders the current route again on the server, without reloading.
+
+## What you see
+
+A lightning segment with the number of calls since the page loaded. It turns red when one of them failed.
+
+Hover it to open the list, newest first:
+
+| Column | What it shows |
+|---|---|
+| **Action** | The start of the action id, and the page it was called from. Hover a row for the full id. |
+| **Status** | HTTP status of the action's response, `failed` when the request itself failed (network, aborted), `…` while it runs. A `throw` inside the action is a `500`. |
+| **Time** | Until the response headers arrived. The action's result streams in after that. |
+| **Revalidated** | What the action told the client router to invalidate (below), and `→ /path` when it redirected. |
+
+The list lives in the browser: it survives client navigations and is lost on a full reload. **Clear** empties it.
+
+<Callout type="tip">
+  The [live demo](./demo) shows three calls in the "Account" scenario, one of them failed.
+</Callout>
+
+### Revalidated
+
+| Value | Meaning | Caused by |
+|---|---|---|
+| **static + dynamic** | The router drops all its cached data, static included. | `revalidatePath`, `updateTag`, setting or deleting a cookie. |
+| **dynamic only** | The router refetches dynamic data only. | `refresh()` |
+| **—** | Nothing to invalidate. | No revalidation, or `revalidateTag` with a cache profile (see below). |
+
+<Callout type="warning">
+  On Next.js 16, `revalidateTag(tag, profile)` is stale-while-revalidate: the next visit gets the old data while the new one is fetched. Next doesn't tell the client about it, so the column shows **—** even though the tag was revalidated on the server.
+</Callout>
+
+## Refresh page
+
+Calls `router.refresh()`: Next renders the current route again on the server and merges the result into the page, keeping client state (inputs, scroll, `useState`). It doesn't clear the data cache: cached `fetch` calls and `'use cache'` entries are reused. Use it to see the page after changing data outside the app (a database, a CMS).
+
+## Where the data comes from
+
+Server Actions are `POST` requests that carry a `next-action` header with the action id. The toolbar wraps `window.fetch` while it's mounted (only in `next dev`) and records the requests that have that header. The response goes to Next untouched: the toolbar only reads its status and two headers, `x-action-revalidated` and `x-action-redirect`. Both formats are read: a number on Next.js 16, a `[paths, tag, cookie]` tuple on Next.js 15.
+
+## What it doesn't do
+
+- **No action names**, only ids. The browser never sees the name; the map from id to function lives on the server (`.next/server/server-reference-manifest.json`). Request insights don't carry it either.
+- **No tags or paths**: Next only sends the client a flag, not which tags or paths were revalidated.
+- **No arguments or return values.** They travel in React's own format in the request and response bodies, which the toolbar doesn't read.
+- Actions called from other tabs, or with a `fetch` that isn't the global one, aren't seen.
