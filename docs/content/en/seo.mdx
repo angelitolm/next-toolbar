@@ -1,0 +1,54 @@
+The metadata you declare with `metadata` or `generateMetadata` goes through merging, templates and `metadataBase` before it reaches the page. The SEO segment shows what actually ended up in the document, and flags what search engines and link previews tend to trip over.
+
+## What you see
+
+A magnifier segment with a count of problems:
+
+| Count | Meaning |
+|---|---|
+| Red | At least one error: something missing or broken. |
+| Amber | Only warnings. |
+| Grey `0` | Nothing to flag. |
+
+Hover it to open the details:
+
+- **title**, with its length in characters;
+- **description**, **canonical**, **og:image** (with the status of the image when it could be checked) and **robots**;
+- **JSON-LD**: how many blocks the page has and their `@type`s (including those inside `@graph`);
+- the list of findings, errors first in the order below.
+
+<Callout type="tip">
+  The [live demo](./demo) shows it in the "Blog post" scenario, with a long title, no description and an `og:image` that returns 404.
+</Callout>
+
+## What it checks
+
+| Level | Check |
+|---|---|
+| Error | No `<title>`. |
+| Warning | Title longer than 60 characters: search results cut it around there. |
+| Error | No `description`. |
+| Warning | Description longer than 160 characters. |
+| Warning | `robots` contains `noindex`. Often intended on private pages; the toolbar just makes it visible. |
+| Warning | No `og:image`: shared links show no image. |
+| Warning | `og:image` is a relative URL. Crawlers need an absolute one: set `metadataBase`. |
+| Error | `og:image` returns 4xx or 5xx. |
+| Error | A JSON-LD block isn't valid JSON. |
+| OK | Every JSON-LD block parses. |
+
+Lengths count characters, so an emoji counts as one.
+
+## Where the data comes from
+
+Everything is read **in the browser, from the document**: `document.title`, the `<meta>` and `<link rel="canonical">` tags in `<head>`, and every `<script type="application/ld+json">` in the page (Next's docs render JSON-LD in the page body). It doesn't depend on Next.js internals, so it works the same on every supported version.
+
+The toolbar reads it again on every navigation and watches `<head>` for changes: since Next.js 15.2 metadata can be streamed in after the page, and React moves it into `<head>` when it arrives.
+
+To check `og:image`, the toolbar sends one `HEAD` request to it, only when the image is on the same origin as the page.
+
+## What it doesn't do
+
+- It isn't a full SEO audit: no headings, alt texts, links, sitemaps or Core Web Vitals.
+- JSON-LD is only checked to be valid JSON, not validated against schema.org. Use Google's [Rich Results Test](https://search.google.com/test/rich-results) for that.
+- An `og:image` on another origin (a CDN, `127.0.0.1` when you browse `localhost`) isn't checked: the browser doesn't let the page read the status without CORS.
+- JSON-LD that a client component adds to the body later, without a navigation or a change in `<head>`, isn't picked up until the next one.

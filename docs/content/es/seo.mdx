@@ -1,0 +1,54 @@
+Los metadatos que declaras con `metadata` o `generateMetadata` pasan por la fusión entre layouts, las plantillas y `metadataBase` antes de llegar a la página. El segmento SEO muestra lo que realmente acabó en el documento y señala lo que suele dar problemas a los buscadores y a las previsualizaciones de enlaces.
+
+## Qué ves
+
+Un segmento con una lupa y el número de problemas:
+
+| Número | Significado |
+|---|---|
+| Rojo | Al menos un error: falta algo o está roto. |
+| Ámbar | Solo avisos. |
+| Gris `0` | Nada que señalar. |
+
+Pasa el ratón por encima para ver el detalle:
+
+- **title**, con su longitud en caracteres;
+- **description**, **canonical**, **og:image** (con el estado de la imagen cuando se pudo comprobar) y **robots**;
+- **JSON-LD**: cuántos bloques tiene la página y sus `@type` (incluidos los que están dentro de `@graph`);
+- la lista de hallazgos, en el orden de la tabla de abajo.
+
+<Callout type="tip">
+  La [demo en vivo](./demo) lo muestra en el escenario "Artículo del blog", con un título largo, sin description y con un `og:image` que devuelve 404.
+</Callout>
+
+## Qué comprueba
+
+| Nivel | Comprobación |
+|---|---|
+| Error | No hay `<title>`. |
+| Aviso | Título de más de 60 caracteres: los resultados de búsqueda lo cortan por ahí. |
+| Error | No hay `description`. |
+| Aviso | Description de más de 160 caracteres. |
+| Aviso | `robots` contiene `noindex`. A menudo es intencionado en páginas privadas; la barra solo lo hace visible. |
+| Aviso | No hay `og:image`: los enlaces compartidos no muestran imagen. |
+| Aviso | `og:image` es una URL relativa. Los crawlers necesitan una absoluta: define `metadataBase`. |
+| Error | `og:image` devuelve 4xx o 5xx. |
+| Error | Un bloque JSON-LD no es JSON válido. |
+| OK | Todos los bloques JSON-LD se leen bien. |
+
+Las longitudes cuentan caracteres, así que un emoji cuenta como uno.
+
+## De dónde salen los datos
+
+Todo se lee **en el navegador, del documento**: `document.title`, las etiquetas `<meta>` y `<link rel="canonical">` de `<head>`, y cada `<script type="application/ld+json">` de la página (la documentación de Next pone el JSON-LD en el cuerpo de la página). No depende de internals de Next.js, así que funciona igual en todas las versiones soportadas.
+
+La barra lo vuelve a leer en cada navegación y vigila los cambios en `<head>`: desde Next.js 15.2 los metadatos pueden llegar en streaming después de la página, y React los mueve a `<head>` cuando llegan.
+
+Para comprobar `og:image`, la barra le hace una petición `HEAD`, solo cuando la imagen está en el mismo origen que la página.
+
+## Qué no hace
+
+- No es una auditoría SEO completa: ni encabezados, ni textos alternativos, ni enlaces, ni sitemaps, ni Core Web Vitals.
+- Del JSON-LD solo se comprueba que sea JSON válido, no se valida contra schema.org. Para eso usa la [prueba de resultados enriquecidos](https://search.google.com/test/rich-results) de Google.
+- Un `og:image` en otro origen (un CDN, o `127.0.0.1` cuando navegas por `localhost`) no se comprueba: sin CORS el navegador no deja leer el estado.
+- El JSON-LD que un componente de cliente añade al cuerpo más tarde, sin navegación ni cambio en `<head>`, no se detecta hasta la siguiente.

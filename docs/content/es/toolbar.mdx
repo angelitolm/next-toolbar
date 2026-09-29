@@ -17,9 +17,10 @@ La barra es una franja de ancho completo que flota 16 px por encima de la parte 
 | 6 | **Tiempos** | `server`: tiempo de render en el servidor. `TTFB`: tiempo hasta el primer byte de una carga completa. `nav`: duración de la petición RSC de una navegación en el cliente | Cada valor, y una pista para activar las request insights si están desactivadas |
 | 7 | **Fetch** | Llamadas `fetch` del servidor y porcentaje de acierto de la caché. Solo con request insights | Resumen de la caché y cada fetch. Consulta [Caché de fetch](./fetch-cache) |
 | 8 | **Errores** | Errores del cliente + error del servidor de esta página. En rojo cuando son > 0 | Errores del servidor (clic → profiler) y errores del cliente (expandir → stack) |
-| 9 | **Next** | Versión de Next.js instalada | Versión de React, request insights activadas/desactivadas, HMR socket conectado/desconectado |
-| 10 | **Tema** | Tema actual | Al hacer clic alterna system → light → dark |
-| 11 | **Minimizar** | Icono de cerrar | Pliega la barra a un círculo |
+| 9 | **SEO** | Lupa y el número de problemas en los metadatos: rojo con errores, ámbar si solo hay avisos | title, description, canonical, og:image, robots, JSON-LD y cada hallazgo. Consulta [SEO](./seo) |
+| 10 | **Next** | Versión de Next.js instalada | Versión de React, request insights activadas/desactivadas, HMR socket conectado/desconectado |
+| 11 | **Tema** | Tema actual | Al hacer clic alterna system → light → dark |
+| 12 | **Minimizar** | Icono de cerrar | Pliega la barra a un círculo |
 
 El estado, la ruta y los tiempos siempre describen la **página en la que estás**. Cuando navegas en el cliente, la barra cambia a los datos de la nueva página en cuanto termina su petición RSC.
 

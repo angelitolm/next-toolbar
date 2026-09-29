@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Advisory, Insight } from './core'
+import type { Advisory, Insight, SeoData } from './core'
 import { ToolbarView, type ClientError, type Theme } from './NextToolbar'
 
 export type NextToolbarDemoProps = {
@@ -20,6 +20,10 @@ export type NextToolbarDemoProps = {
   theme?: Theme
   /** Known vulnerabilities to show for `nextVersion`. Omit to hide the security segment (the demo never fetches). */
   advisories?: Advisory[]
+  /** Page metadata for the SEO segment. Omit to hide it. */
+  seo?: SeoData
+  /** Status of the og:image, as the live toolbar gets it from a HEAD request. */
+  ogImageStatus?: number
 }
 
 const NONE: never[] = []
@@ -40,6 +44,8 @@ export function NextToolbarDemo({
   nextVersion = '16.3.6',
   theme = 'system',
   advisories,
+  seo,
+  ogImageStatus,
 }: NextToolbarDemoProps) {
   // Clear works like the live toolbar: drop everything but the current page's request, and client errors.
   const [cleared, setCleared] = useState<{ keep?: string } | null>(null)
@@ -66,6 +72,7 @@ export function NextToolbarDemo({
         basePath: '',
         visits: NONE,
         errorLog: NONE,
+        seo: seo && { data: seo, ogImageStatus },
         security: advisories ? { status: 'ok', advisories, checkedAt: Date.now() } : { status: 'off', advisories: NONE },
       }}
       onClear={(keep) => setCleared({ keep })}

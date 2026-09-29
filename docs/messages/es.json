@@ -50,6 +50,10 @@
       "title": "Caché de fetch",
       "description": "HIT, HMR, MISS y SKIP, el porcentaje de acierto y los motivos de caché."
     },
+    "seo": {
+      "title": "SEO",
+      "description": "Los metadatos que realmente llegaron a la página, y lo que da problemas a buscadores y previsualizaciones de enlaces."
+    },
     "security": {
       "title": "Seguridad",
       "description": "Vulnerabilidades conocidas de tu versión de Next.js, según los avisos de seguridad de GitHub, y a qué versión actualizar."
@@ -86,6 +90,7 @@
       "hover": "Pasa el ratón (o usa Tab) por cualquier segmento de la barra para abrir su panel.",
       "profiler": "Haz clic en el id de la petición (#) para abrir el profiler: todas las peticiones, sus fetches y un timeline del render.",
       "errors": "En el escenario 500, abre el panel de errores y haz clic en Details.",
+      "seo": "En \"Post del blog\", pasa el ratón por el segmento SEO: un título demasiado largo, sin description y un og:image que devuelve 404.",
       "security": "En \"Next.js desactualizado\", pasa el ratón por el escudo rojo: vulnerabilidades conocidas de la 16.2.6 y la versión a la que actualizar.",
       "minimize": "Minimízala con el logo o el botón de cerrar, y luego haz clic en el círculo.",
       "theme": "Cambia el tema con el botón de la derecha."

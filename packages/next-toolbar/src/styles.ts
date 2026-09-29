@@ -198,6 +198,11 @@ button.error-item { display: flex; align-items: baseline; gap: 10px; }
 .error-item > summary::-webkit-details-marker { display: none; }
 .error-item pre { margin: 8px 0 2px; padding: 8px 10px; max-height: 200px; overflow: auto; border-radius: 6px; background: var(--nt-raised); font: 11px/1.5 var(--nt-mono); white-space: pre-wrap; word-break: break-word; }
 .security .panel { min-width: 360px; left: auto; right: 0; }
+.seo .panel { min-width: 380px; max-width: min(460px, calc(100vw - 32px)); left: auto; right: 0; }
+.sep-h { height: 1px; background: var(--nt-border); margin: 6px 10px; }
+.issue { display: flex; gap: 8px; align-items: baseline; padding: 5px 10px; line-height: 1.4; }
+.issue-dot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; transform: translateY(-1px); }
+.issue-dot.err { background: var(--nt-err); } .issue-dot.warn { background: var(--nt-warn); } .issue-dot.ok { background: var(--nt-static-fg); }
 .sec-head { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px 10px; }
 .upgrade { display: flex; flex-direction: column; gap: 6px; margin: 0 4px 8px; padding: 10px 12px; border-radius: 8px; line-height: 1.4; }
 .upgrade.err { background: var(--nt-err-bg); border: 1px solid var(--nt-err-border); }

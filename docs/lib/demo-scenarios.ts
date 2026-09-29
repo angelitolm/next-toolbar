@@ -125,13 +125,21 @@ const ADVISORIES_16_2_6: Advisory[] = [
   { id: 'GHSA-q8wf-6r8g-63ch', cve: 'CVE-2026-64644', severity: 'medium', summary: 'Denial of Service in the Image Optimization API using SVGs', url: gh('GHSA-q8wf-6r8g-63ch'), published: '2026-07-22', patched: '16.2.11', reviewed: true },
 ]
 
+// Metadata as the toolbar reads it from the document: long title, no description, broken og:image.
+const BLOG_SEO: NonNullable<NextToolbarDemoProps['seo']> = {
+  title: 'Hello world from the App Router | My blog about Next.js and more',
+  canonical: 'https://example.com/blog/hello-world',
+  ogImage: 'https://example.com/og/hello-world.png',
+  jsonLd: ['{"@context":"https://schema.org","@type":"BlogPosting","headline":"Hello world"}'],
+}
+
 export type ScenarioId = 'home' | 'blog' | 'dashboard' | 'account' | 'checkout' | 'notFound' | 'settings' | 'outdated'
 
 export const SCENARIOS: { id: ScenarioId; props: NextToolbarDemoProps }[] = [
   { id: 'home', props: { pathname: '/', status: 200, timingMs: 26, isStatic: true, insights: ALL, advisories: [] } },
   {
     id: 'blog',
-    props: { pathname: '/blog/hello-world', params: { slug: 'hello-world' }, status: 200, timingMs: 58, via: 'rsc', isStatic: true, insights: ALL, advisories: [] },
+    props: { pathname: '/blog/hello-world', params: { slug: 'hello-world' }, status: 200, timingMs: 58, via: 'rsc', isStatic: true, insights: ALL, advisories: [], seo: BLOG_SEO, ogImageStatus: 404 },
   },
   // Next's dev data says static; the no-store fetch makes the toolbar report Dynamic, like `next build`.
   { id: 'dashboard', props: { pathname: '/dashboard', status: 200, timingMs: 251, via: 'rsc', isStatic: true, insights: ALL, advisories: [] } },

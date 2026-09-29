@@ -470,3 +470,63 @@ export function routePattern(pathname: string, params: Record<string, string | s
   }
   return out
 }
+
+// ── SEO ───────────────────────────────────────────────────────────────────────
+
+// What the page's metadata resolved to in the browser (Next writes it into document.head).
+export type SeoData = {
+  title?: string
+  description?: string
+  canonical?: string
+  robots?: string
+  ogImage?: string
+  /** Raw text of each <script type="application/ld+json">. */
+  jsonLd: string[]
+}
+
+export type SeoIssue = { level: 'err' | 'warn' | 'ok'; message: string }
+
+// Search results cut titles around 60 characters and descriptions around 160.
+const TITLE_MAX = 60
+const DESCRIPTION_MAX = 160
+
+export function jsonLdSummary(blocks: string[]): { types: string[]; invalid: number } {
+  const types: string[] = []
+  let invalid = 0
+  const collect = (node: unknown) => {
+    if (Array.isArray(node)) return node.forEach(collect)
+    if (!node || typeof node !== 'object') return
+    const { '@type': type, '@graph': graph } = node as Record<string, unknown>
+    for (const t of [type].flat()) if (typeof t === 'string') types.push(t)
+    collect(graph)
+  }
+  for (const block of blocks) {
+    try {
+      collect(JSON.parse(block))
+    } catch {
+      invalid++
+    }
+  }
+  return { types, invalid }
+}
+
+// ponytail: checks what search engines and link previews trip over most, not a full SEO audit.
+export function seoIssues(seo: SeoData, ogImageStatus?: number): SeoIssue[] {
+  const issues: SeoIssue[] = []
+  const length = (s: string) => [...s].length
+  if (!seo.title) issues.push({ level: 'err', message: 'Missing <title>.' })
+  else if (length(seo.title) > TITLE_MAX)
+    issues.push({ level: 'warn', message: `Title is ${length(seo.title)} characters; search results cut it around ${TITLE_MAX}.` })
+  if (!seo.description) issues.push({ level: 'err', message: 'Missing description. Add it in metadata or generateMetadata.' })
+  else if (length(seo.description) > DESCRIPTION_MAX)
+    issues.push({ level: 'warn', message: `Description is ${length(seo.description)} characters; search results cut it around ${DESCRIPTION_MAX}.` })
+  if (seo.robots && /noindex/i.test(seo.robots)) issues.push({ level: 'warn', message: `robots is "${seo.robots}": search engines won't index this page.` })
+  if (!seo.ogImage) issues.push({ level: 'warn', message: 'No og:image: link previews show no image.' })
+  else if (!/^https?:\/\//i.test(seo.ogImage))
+    issues.push({ level: 'warn', message: 'og:image is a relative URL; crawlers need an absolute one (set metadataBase).' })
+  if (ogImageStatus !== undefined && ogImageStatus >= 400) issues.push({ level: 'err', message: `og:image returns ${ogImageStatus}.` })
+  const ld = jsonLdSummary(seo.jsonLd)
+  if (ld.invalid) issues.push({ level: 'err', message: `${ld.invalid} JSON-LD block${ld.invalid > 1 ? 's are' : ' is'} not valid JSON.` })
+  else if (seo.jsonLd.length) issues.push({ level: 'ok', message: 'JSON-LD parses.' })
+  return issues
+}

@@ -133,3 +133,7 @@ export const Refresh2 = icon(
     <path stroke="currentColor" strokeDasharray="3 3" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2 12c0 5.52 4.48 10 10 10" />
   </>,
 )
+
+export const SearchNormal1 = icon(
+  <path d="M11.5 2c5.25 0 9.5 4.25 9.5 9.5S16.75 21 11.5 21 2 16.75 2 11.5c0-3.7 2.11-6.9 5.2-8.47M22 22l-2-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
+)

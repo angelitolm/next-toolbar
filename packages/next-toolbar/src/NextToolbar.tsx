@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname } from 'next/navigation'
-import { type Advisory, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
-import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Hashtag, Monitor, Moon, Refresh2, Routing2, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
+import { type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
+import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Hashtag, Monitor, Moon, Refresh2, Routing2, SearchNormal1, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { VERSION } from './version'
 import { CachePill, CacheSummary, Profiler } from './Profiler'
@@ -51,11 +51,12 @@ function Toolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securit
   const timing = timings[pathname]
   const [visits, setVisits] = useVisits(pathname, routePattern(pathname, params), timing)
   const [security, refreshSecurity] = useSecurity(nextVersion, securityCheck)
+  const seo = useSeo(pathname)
 
   return (
     <ToolbarView
       defaultTheme={defaultTheme}
-      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security }}
+      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo }}
       onRefreshSecurity={refreshSecurity}
       onClear={(keepId) => {
         clear(keepId)
@@ -83,6 +84,14 @@ export type ToolbarData = {
   errorLog: LoggedError[]
   /** Known vulnerabilities of the installed Next.js version. */
   security: SecurityState
+  /** Page metadata as resolved in the document. Omit to hide the SEO segment. */
+  seo?: SeoState
+}
+
+export type SeoState = {
+  data: SeoData
+  /** Status of a HEAD request to og:image; undefined when not checked (none, other origin, pending). */
+  ogImageStatus?: number
 }
 
 export type SecurityState = {
@@ -96,7 +105,7 @@ export type SecurityState = {
 type ViewProps = { data: ToolbarData; defaultTheme: Theme; onClear: (keepId?: string) => void; onRefreshSecurity?: () => void }
 
 export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity }: ViewProps) {
-  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security } = data
+  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo } = data
   const root = useShadowRoot()
   const [collapsed, setCollapsed] = useState(false)
   const [profiler, setProfiler] = useState<{ open: boolean; id?: string }>({ open: false })
@@ -301,6 +310,8 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity }: 
           </details>
         ))}
       </Segment>
+
+      {seo && <SeoSegment seo={seo} />}
 
       {security.status !== 'off' && <SecuritySegment security={security} nextVersion={nextVersion} onRefresh={onRefreshSecurity} />}
 
@@ -667,6 +678,96 @@ function SecuritySegment({ security, nextVersion, onRefresh }: { security: Secur
           </button>
         )}
       </div>
+    </Segment>
+  )
+}
+
+const readMeta = (selector: string) => document.head.querySelector<HTMLMetaElement>(selector)?.content || undefined
+
+function readSeo(): SeoData {
+  return {
+    title: document.title || undefined,
+    description: readMeta('meta[name="description"]'),
+    canonical: document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href,
+    robots: readMeta('meta[name="robots"]'),
+    ogImage: readMeta('meta[property="og:image"]'),
+    // Next's docs render JSON-LD in the page body, so search the whole document.
+    jsonLd: [...document.querySelectorAll('script[type="application/ld+json"]')].map((s) => s.textContent ?? ''),
+  }
+}
+
+// Metadata as the browser sees it. Watches <head> because Next 15.2+ streams metadata in
+// after the page, and React hoists it there. ponytail: JSON-LD changes in the body are
+// only picked up on navigation or a head change.
+function useSeo(pathname: string): SeoState | undefined {
+  const [data, setData] = useState<SeoData>()
+  const [ogImageStatus, setOgImageStatus] = useState<number>()
+
+  useEffect(() => {
+    const read = () => {
+      const next = readSeo()
+      setData((prev) => (prev && JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
+    }
+    read()
+    const observer = new MutationObserver(read)
+    observer.observe(document.head, { childList: true, subtree: true, attributes: true, characterData: true })
+    return () => observer.disconnect()
+  }, [pathname])
+
+  const ogImage = data?.ogImage
+  useEffect(() => {
+    setOgImageStatus(undefined)
+    if (!ogImage) return
+    let url: URL
+    try {
+      url = new URL(ogImage, location.href)
+    } catch {
+      return
+    }
+    // ponytail: other origins need CORS to read the status; those are left unchecked.
+    if (url.origin !== location.origin) return
+    let cancelled = false
+    fetch(url, { method: 'HEAD' })
+      .then((r) => !cancelled && setOgImageStatus(r.status))
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [ogImage])
+
+  return data && { data, ogImageStatus }
+}
+
+function SeoSegment({ seo: { data, ogImageStatus } }: { seo: SeoState }) {
+  const issues = seoIssues(data, ogImageStatus)
+  const problems = issues.filter((i) => i.level !== 'ok').length
+  const tone = issues.some((i) => i.level === 'err') ? 'err' : problems ? 'warn' : ''
+  const ld = jsonLdSummary(data.jsonLd)
+  const unset = <span className="dim">not set</span>
+
+  return (
+    <Segment className="seo" label={<><SearchNormal1 className={`ico ${tone ? `ico-${tone}` : ''}`} /><span className="dim hide-md">SEO</span><span className={`count ${tone}`}>{problems}</span></>}>
+      <div className="sec-head">
+        <b>Page metadata</b>
+        <span className="dim">Read from the document after each navigation.</span>
+      </div>
+      <Row k="title">{data.title ? <>{data.title} <span className="dim">({[...data.title].length} chars)</span></> : unset}</Row>
+      <Row k="description">{data.description ?? unset}</Row>
+      <Row k="canonical">{data.canonical ? <code>{data.canonical}</code> : unset}</Row>
+      <Row k="og:image">
+        {data.ogImage ? <><code>{data.ogImage}</code>{ogImageStatus !== undefined && <span className="dim"> · {ogImageStatus}</span>}</> : unset}
+      </Row>
+      <Row k="robots">{data.robots ?? <span className="dim">not set (index, follow)</span>}</Row>
+      <Row k="JSON-LD">
+        {data.jsonLd.length ? `${data.jsonLd.length} block${data.jsonLd.length > 1 ? 's' : ''}${ld.types.length ? ` · ${ld.types.join(', ')}` : ''}` : unset}
+      </Row>
+      {issues.length > 0 && <div className="sep-h" />}
+      {issues.map((issue, i) => (
+        <div key={i} className="issue">
+          <span className={`issue-dot ${issue.level}`} />
+          <span>{issue.message}</span>
+        </div>
+      ))}
     </Segment>
   )
 }

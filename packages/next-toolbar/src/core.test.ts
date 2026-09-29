@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { compareVersions, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { compareVersions, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -230,4 +230,25 @@ test('advisories: global + fresh repo ones, merged and prioritised', () => {
   assert.equal(upgradeTarget(merged), '16.3.6')
   assert.equal(upgradeTarget([]), undefined)
   assert.deepEqual(fromGlobalAdvisories({ message: 'rate limited' }, '16.2.6'), [])
+})
+
+test('jsonLdSummary collects @type from objects, arrays and @graph; counts invalid blocks', () => {
+  const blocks = [
+    '{"@context":"https://schema.org","@type":"BlogPosting"}',
+    '[{"@type":["Person","Author"]}]',
+    '{"@graph":[{"@type":"WebSite"}]}',
+    '{not json',
+  ]
+  assert.deepEqual(jsonLdSummary(blocks), { types: ['BlogPosting', 'Person', 'Author', 'WebSite'], invalid: 1 })
+})
+
+test('seoIssues flags missing, too long, noindex, broken og:image and bad JSON-LD', () => {
+  const good = { title: 'Hola', description: 'Un post', ogImage: 'http://localhost:3000/og.png', jsonLd: ['{"@type":"BlogPosting"}'] }
+  assert.deepEqual(seoIssues(good, 200), [{ level: 'ok', message: 'JSON-LD parses.' }])
+  assert.deepEqual(seoIssues({ jsonLd: [] }).map((i) => i.level), ['err', 'err', 'warn'])
+  const bad = seoIssues({ ...good, title: 'x'.repeat(61), description: 'y'.repeat(161), robots: 'noindex, follow', ogImage: '/og.png', jsonLd: ['{'] }, 404)
+  assert.deepEqual(bad.map((i) => i.level), ['warn', 'warn', 'warn', 'warn', 'err', 'err'])
+  assert.match(bad[0].message, /61 characters/)
+  // Length counts characters, not UTF-16 units.
+  assert.equal(seoIssues({ ...good, title: '😀'.repeat(60) }).length, 1)
 })

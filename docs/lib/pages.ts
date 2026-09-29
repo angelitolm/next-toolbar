@@ -8,6 +8,7 @@ import {
   Hierarchy,
   Home2,
   Layer,
+  SearchNormal1,
   MessageQuestion,
   Setting2,
   Activity,
@@ -21,7 +22,7 @@ import type { Locale } from '@/i18n/routing'
 // Titles and descriptions live in messages/<locale>.json under `pages.<slug>`.
 export const SECTIONS = [
   { key: 'start', pages: ['index', 'getting-started', 'configuration'] },
-  { key: 'features', pages: ['toolbar', 'profiler', 'render-mode', 'fetch-cache', 'security'] },
+  { key: 'features', pages: ['toolbar', 'profiler', 'render-mode', 'fetch-cache', 'seo', 'security'] },
   { key: 'reference', pages: ['compatibility', 'architecture', 'troubleshooting'] },
   { key: 'project', pages: ['design', 'contributing'] },
 ] as const
@@ -40,6 +41,7 @@ export const ICONS: Record<Slug, Icon> = {
   profiler: Activity,
   'render-mode': Layer,
   'fetch-cache': ArrangeHorizontal,
+  seo: SearchNormal1,
   security: ShieldTick,
   compatibility: TickCircle,
   architecture: Hierarchy,
@@ -68,6 +70,7 @@ const CONTENT: Record<Locale, Record<Slug, Loader>> = {
     profiler: () => import('@/content/en/profiler.mdx'),
     'render-mode': () => import('@/content/en/render-mode.mdx'),
     'fetch-cache': () => import('@/content/en/fetch-cache.mdx'),
+    seo: () => import('@/content/en/seo.mdx'),
     security: () => import('@/content/en/security.mdx'),
     compatibility: () => import('@/content/en/compatibility.mdx'),
     architecture: () => import('@/content/en/architecture.mdx'),
@@ -83,6 +86,7 @@ const CONTENT: Record<Locale, Record<Slug, Loader>> = {
     profiler: () => import('@/content/es/profiler.mdx'),
     'render-mode': () => import('@/content/es/render-mode.mdx'),
     'fetch-cache': () => import('@/content/es/fetch-cache.mdx'),
+    seo: () => import('@/content/es/seo.mdx'),
     security: () => import('@/content/es/security.mdx'),
     compatibility: () => import('@/content/es/compatibility.mdx'),
     architecture: () => import('@/content/es/architecture.mdx'),
