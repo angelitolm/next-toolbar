@@ -9,13 +9,13 @@ La barra es una franja de ancho completo que flota 16 px por encima de la parte 
 
 | # | Segmento | Qué muestra | Panel al pasar el ratón |
 |---|---|---|---|
-| 1 | **Logo y versión** | La marca de NextToolbar y la versión instalada de NextToolbar (`v0.4.0`, oculta cuando a la barra le falta espacio). Haz clic en el logo para minimizar. | — |
+| 1 | **Logo y versión** | La marca de NextToolbar y la versión instalada de NextToolbar (`v0.5.0`, oculta cuando a la barra le falta espacio). Haz clic en el logo para minimizar. | — |
 | 2 | **Estado** | Estado HTTP: chip con degradado para 2xx, ámbar para 3xx, rojo para 4xx/5xx, gris `—` cuando se desconoce | El estado y si vino de una petición de documento o de una navegación en el cliente (RSC) |
 | 3 | **Id de petición** | Los 6 primeros caracteres del id de la petición en el servidor, o `profiler` cuando las request insights están desactivadas | — Al hacer clic abre el [profiler](./profiler) en esta petición |
 | 4 | **Ruta** | El patrón de ruta que coincidió, p. ej. `/blog/[slug]` | Patrón, ruta real y cada valor de `params.*` |
 | 5 | **Modo de render** | `Static`, `Dynamic`, `Static?`, `Rendering…` o `?` | El porqué, y lo que el modo desarrollo puede y no puede saber. Consulta [Modo de render](./render-mode) |
 | 6 | **Tiempos** | `server`: tiempo de render en el servidor. `TTFB`: tiempo hasta el primer byte de una carga completa. `nav`: duración de la petición RSC de una navegación en el cliente | Cada valor, y una pista para activar las request insights si están desactivadas |
-| 7 | **Fetch** | Llamadas `fetch` del servidor y porcentaje de acierto de la caché. Solo con request insights | Resumen de la caché y cada fetch. Consulta [Caché de fetch](./fetch-cache) |
+| 7 | **Fetch** | Llamadas `fetch` del servidor y porcentaje de acierto de la caché. Solo con request insights | Resumen de la caché y cada fetch con su frescura y sus tags; revalida un fetch por sus tags. Consulta [Caché de fetch](./fetch-cache) |
 | 8 | **Errores** | Errores del cliente + error del servidor de esta página. En rojo cuando son > 0 | Errores del servidor (clic → profiler) y errores del cliente (expandir → stack) |
 | 9 | **Actions** | Rayo y el número de llamadas a Server Actions. En rojo cuando alguna falló | Cada llamada: estado, tiempo, qué revalidó, redirección; **Refresh page** y **Clear**. Consulta [Server Actions](./server-actions) |
 | 10 | **SEO** | Lupa y el número de problemas en los metadatos: rojo con errores, ámbar si solo hay avisos | title, description, canonical, og:image, robots, JSON-LD y cada hallazgo. Consulta [SEO](./seo) |
