@@ -94,11 +94,19 @@
     "scenarios": "Scenarios",
     "page": "page",
     "tryTitle": "Things to try",
+    "actionsTry": {
+      "title": "Try the Server Actions",
+      "hint": "Each button calls a simulated Server Action of this page. Hover the lightning in the bar to see it arrive: pending first, then its status, time and what it revalidated.",
+      "save": "Save profile",
+      "refresh": "Refresh session",
+      "upload": "Upload avatar (fails)",
+      "signOut": "Sign out (redirects)"
+    },
     "try": {
       "hover": "Hover (or Tab to) any segment of the bar to open its panel.",
       "profiler": "Click the request id (#) to open the profiler: every request, its fetches and a render timeline.",
       "errors": "In the 500 scenario, open the errors panel and click Details.",
-      "actions": "In \"Account\", hover the lightning: three Server Action calls, one of them failed. Clear empties the list.",
+      "actions": "In \"Account\", call a few Server Actions with the buttons under the scenarios, then hover the lightning: names, status, time and what each one revalidated. Revalidate works too.",
       "seo": "In \"Blog post\", hover the SEO segment: a title that's too long, no description and an og:image that returns 404.",
       "links": "In \"Blog post\", hover the links segment: two of the page's links are broken.",
       "security": "In \"Outdated Next.js\", hover the red shield: known vulnerabilities of 16.2.6 and the version to upgrade to.",

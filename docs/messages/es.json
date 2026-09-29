@@ -93,12 +93,20 @@
     "simulated": "NextToolbar solo funciona en next dev. Esta página alimenta el mismo componente con datos de ejemplo, para que la pruebes sin instalar nada.",
     "scenarios": "Escenarios",
     "page": "página",
+    "actionsTry": {
+      "title": "Prueba las Server Actions",
+      "hint": "Cada botón llama a una Server Action simulada de esta página. Pasa el ratón por el rayo de la barra para verla llegar: primero pendiente, luego su estado, su tiempo y lo que revalidó.",
+      "save": "Guardar perfil",
+      "refresh": "Refrescar sesión",
+      "upload": "Subir avatar (falla)",
+      "signOut": "Cerrar sesión (redirige)"
+    },
     "tryTitle": "Qué probar",
     "try": {
       "hover": "Pasa el ratón (o usa Tab) por cualquier segmento de la barra para abrir su panel.",
       "profiler": "Haz clic en el id de la petición (#) para abrir el profiler: todas las peticiones, sus fetches y un timeline del render.",
       "errors": "En el escenario 500, abre el panel de errores y haz clic en Details.",
-      "actions": "En \"Cuenta\", pasa el ratón por el rayo: tres llamadas a Server Actions, una de ellas fallida. Clear vacía la lista.",
+      "actions": "En \"Cuenta\", llama a algunas Server Actions con los botones que hay bajo los escenarios y pasa el ratón por el rayo: nombres, estado, tiempo y lo que revalidó cada una. Revalidar también funciona.",
       "seo": "En \"Post del blog\", pasa el ratón por el segmento SEO: un título demasiado largo, sin description y un og:image que devuelve 404.",
       "links": "En \"Post del blog\", pasa el ratón por el segmento de enlaces: dos de los enlaces de la página están rotos.",
       "security": "En \"Next.js desactualizado\", pasa el ratón por el escudo rojo: vulnerabilidades conocidas de la 16.2.6 y la versión a la que actualizar.",

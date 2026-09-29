@@ -158,7 +158,22 @@ const ACCOUNT_ACTION_NAMES: Record<string, ActionName> = {
   '40f1c9a7e2b84d0c6a5e3f1b9d7c2a8e4f6b0d3c19': { name: 'uploadAvatar', file: 'app/account/actions.ts' },
   '00a8d3e61f5c7b9204e8a6c1d3f5b7092e4c6a8b1d': { name: 'refreshSession', file: 'app/account/actions.ts' },
   '7f3a2c9d1e5b8a4c6f0e2d7b9a1c3e5f8d0b2a4c6e': { name: 'saveProfile', file: 'app/account/actions.ts' },
+  '60c2e8a4f1d7b3906e5a2c8f4d1b7e3a9c6f0d2b85': { name: 'signOut', file: 'app/account/actions.ts' },
 }
+
+// Buttons under the "Account" scenario: each click adds a call to the toolbar, pending first,
+// then resolved after `ms`, like a real Server Action.
+export type SimulatedAction = { key: 'save' | 'refresh' | 'upload' | 'signOut'; ms: [number, number] } & Pick<
+  ActionCall,
+  'actionId' | 'status' | 'revalidation' | 'redirect'
+>
+
+export const ACCOUNT_BUTTONS: SimulatedAction[] = [
+  { key: 'save', actionId: '7f3a2c9d1e5b8a4c6f0e2d7b9a1c3e5f8d0b2a4c6e', status: 200, revalidation: 'all', ms: [90, 220] },
+  { key: 'refresh', actionId: '00a8d3e61f5c7b9204e8a6c1d3f5b7092e4c6a8b1d', status: 200, revalidation: 'dynamic', ms: [25, 70] },
+  { key: 'upload', actionId: '40f1c9a7e2b84d0c6a5e3f1b9d7c2a8e4f6b0d3c19', status: 500, revalidation: 'none', ms: [600, 1100] },
+  { key: 'signOut', actionId: '60c2e8a4f1d7b3906e5a2c8f4d1b7e3a9c6f0d2b85', status: 200, revalidation: 'all', redirect: '/login', ms: [60, 140] },
+]
 
 export type ScenarioId = 'home' | 'blog' | 'dashboard' | 'account' | 'checkout' | 'notFound' | 'settings' | 'outdated'
 

@@ -53,7 +53,18 @@ export default async function DemoPage({ params }: Props) {
       </div>
 
       <h2 className="mb-4 text-xl font-bold tracking-tight">{t('scenarios')}</h2>
-      <DemoPlayground copy={copy} pageLabel={t('page')} />
+      <DemoPlayground
+        copy={copy}
+        pageLabel={t('page')}
+        actionsCopy={{
+          title: t('actionsTry.title'),
+          hint: t('actionsTry.hint'),
+          save: t('actionsTry.save'),
+          refresh: t('actionsTry.refresh'),
+          upload: t('actionsTry.upload'),
+          signOut: t('actionsTry.signOut'),
+        }}
+      />
 
       <h2 className="mt-12 mb-4 text-xl font-bold tracking-tight">{t('tryTitle')}</h2>
       <ul className="space-y-3">
