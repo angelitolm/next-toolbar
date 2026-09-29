@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { compareVersions, actionNames, parseRevalidate, parseFetchCacheEntry, indexFetchCache, freshness, pageTags, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { compareVersions, actionNames, parseRevalidate, parseFetchCacheEntry, indexFetchCache, freshness, pageTags, shortDuration, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -387,4 +387,12 @@ test('pageTags lists distinct tags of the page fetches, in fetch order', () => {
   const fetches = [{ url: 'https://api/products' }, { url: 'https://api/categories' }, { url: 'https://api/uncached' }, {}]
   assert.deepEqual(pageTags(fetches, cache), ['products', 'catalog', 'categories'])
   assert.deepEqual(pageTags(fetches, {}), [])
+})
+
+test('shortDuration rounds down to the largest unit', () => {
+  assert.equal(shortDuration(0), '0s')
+  assert.equal(shortDuration(59), '59s')
+  assert.equal(shortDuration(60), '1m')
+  assert.equal(shortDuration(2337), '38m')
+  assert.equal(shortDuration(93_600), '26h')
 })

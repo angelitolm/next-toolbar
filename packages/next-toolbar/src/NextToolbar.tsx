@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { type ActionName, type RevalidateRequest, SERVER_HEADER, SERVER_ROUTE, type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight, type InsightFetch, type CachedFetch, type Freshness, freshness, pageTags } from './core'
+import { type ActionName, type RevalidateRequest, SERVER_HEADER, SERVER_ROUTE, type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight, type InsightFetch, type CachedFetch, type Freshness, freshness, pageTags, shortDuration } from './core'
 import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Flash, Hashtag, Link21, Monitor, Moon, Refresh2, Routing2, SearchNormal1, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { VERSION } from './version'
@@ -1061,7 +1061,11 @@ function ServerRouteHint({ why }: { why: string }) {
 }
 
 const freshnessLabel = (f: Freshness) =>
-  f.state === 'forever' ? 'cached, no expiry' : f.state === 'fresh' ? `fresh · stale in ${f.seconds}s` : `stale for ${f.seconds}s`
+  f.state === 'forever'
+    ? 'cached, no expiry'
+    : f.state === 'fresh'
+      ? `fresh · stale in ${shortDuration(f.seconds ?? 0)}`
+      : `stale for ${shortDuration(f.seconds ?? 0)}`
 
 // The request's server fetches, joined with the data cache so each one shows its tags and freshness,
 // react-query devtools style: a tag is the query key, revalidateTag is invalidateQueries.

@@ -709,6 +709,10 @@ export function freshness(entry: CachedFetch, now: number): Freshness {
   return left > 0 ? { state: 'fresh', seconds: left } : { state: 'stale', seconds: Math.abs(left) }
 }
 
+// 45 -> "45s", 2337 -> "38m", 93600 -> "26h": coarse on purpose, it's a glance at freshness.
+export const shortDuration = (seconds: number) =>
+  seconds < 60 ? `${seconds}s` : seconds < 3600 ? `${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 3600)}h`
+
 // Distinct tags of the page's fetches, in fetch order: what can be revalidated from here.
 export function pageTags(fetches: InsightFetch[], cache: Record<string, CachedFetch>): string[] {
   const out = new Set<string>()
