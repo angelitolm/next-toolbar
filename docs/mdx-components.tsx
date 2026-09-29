@@ -2,6 +2,7 @@ import type { MDXComponents } from 'mdx/types'
 import type { ComponentProps } from 'react'
 import { Callout } from '@/components/callout'
 import { CodeBlock } from '@/components/code-block'
+import { FetchCacheDemo } from '@/components/fetch-cache-demo'
 import { Link } from '@/i18n/navigation'
 
 // Content links to other pages as `./slug` (or `./` for home). Route them through the
@@ -25,6 +26,7 @@ const components: MDXComponents = {
   ),
   pre: CodeBlock,
   Callout,
+  FetchCacheDemo,
 }
 
 export function useMDXComponents(): MDXComponents {

@@ -2,7 +2,7 @@
 import { NextToolbarDemo, type ActionCall } from '@angelitolm/next-toolbar'
 import { Card, Chart21, DocumentText, FlashCircle, Home2, SearchStatus, Setting2, ShieldCross, User, type Icon } from 'iconsax-reactjs'
 import { useRef, useState } from 'react'
-import { ACCOUNT_BUTTONS, SCENARIOS, type ScenarioId, type SimulatedAction } from '@/lib/demo-scenarios'
+import { ACCOUNT_BUTTONS, SCENARIOS, blogCache, type ScenarioId, type SimulatedAction } from '@/lib/demo-scenarios'
 
 const ICONS: Record<ScenarioId, Icon> = {
   home: Home2,
@@ -24,6 +24,8 @@ export function DemoPlayground({ copy, pageLabel, actionsCopy }: { copy: Copy; p
   // Calls made with the buttons below, newest first; they go on top of the scenario's own.
   const [calls, setCalls] = useState<ActionCall[]>([])
   const seq = useRef(0)
+  // The toolbar only renders in the browser, so this clock never reaches server HTML.
+  const [cache] = useState(() => blogCache(Date.now()))
 
   const pick = (id: ScenarioId) => {
     setActive(id)
@@ -90,7 +92,12 @@ export function DemoPlayground({ copy, pageLabel, actionsCopy }: { copy: Copy; p
           </div>
         </div>
       )}
-      <NextToolbarDemo key={active} {...scenario.props} actions={scenario.props.actions && [...calls, ...scenario.props.actions]} />
+      <NextToolbarDemo
+        key={active}
+        {...scenario.props}
+        actions={scenario.props.actions && [...calls, ...scenario.props.actions]}
+        fetchCache={active === 'blog' ? cache : undefined}
+      />
     </>
   )
 }

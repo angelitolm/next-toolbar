@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { type ActionName, type RevalidateRequest, SERVER_HEADER, SERVER_ROUTE, type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
+import { type ActionName, type RevalidateRequest, SERVER_HEADER, SERVER_ROUTE, type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight, type InsightFetch, type CachedFetch, type Freshness, freshness, pageTags, shortDuration } from './core'
 import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Flash, Hashtag, Link21, Monitor, Moon, Refresh2, Routing2, SearchNormal1, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { VERSION } from './version'
@@ -22,7 +22,7 @@ const SEEN_KEY = 'next-toolbar:seen'
 
 // Segments added in the current minor: they wear a "new" badge until first opened.
 // ponytail: edit by hand on each release that adds a segment.
-const NEW_SEGMENTS = ['actions', 'seo', 'links']
+const NEW_SEGMENTS = ['actions', 'seo', 'links', 'fetch']
 
 export type Theme = 'system' | 'light' | 'dark'
 
@@ -109,9 +109,11 @@ export type ToolbarData = {
 }
 
 export type ServerState = {
-  /** 'unknown' until the actions panel is first opened. */
+  /** 'unknown' until the actions or fetch panel is first opened. */
   status: 'unknown' | 'missing' | 'ready'
   actionNames: Record<string, ActionName>
+  /** The data cache's fetch entries by URL: tags and revalidate, which request insights leave out. */
+  fetchCache?: Record<string, CachedFetch>
 }
 
 export type LinksState = {
@@ -290,36 +292,17 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
       </Segment>
 
       {insight && (
-        <Segment
-          label={
-            <>
-              <ArrangeHorizontal className="ico" />
-              <span className="dim hide-md">fetch</span>
-              <span className="count">{insight.fetches.length}</span>
-              {fetchStats && fetchStats.hitRate !== undefined && (
-                <span className="dim hide-md">{Math.round(fetchStats.hitRate * 100)}% hit</span>
-              )}
-            </>
-          }
-        >
-          {insight.fetches.length === 0 && <div className="hint">No server fetches for this request.</div>}
-          {fetchStats && fetchStats.total > 0 && (
-            <div className="row">
-              <span>Cache</span>
-              <CacheSummary stats={fetchStats} />
-            </div>
-          )}
-          {insight.fetches.map((f, i) => (
-            <div key={i} className="fetch-row">
-              <div>
-                <span className="dim">{f.method ?? 'GET'} {f.statusCode ?? ''}</span>
-                <CachePill f={f} />
-                <span className="dim">{f.durationMs !== undefined && ms(f.durationMs)}</span>
-              </div>
-              <code>{f.url}</code>
-            </div>
-          ))}
-        </Segment>
+        <FetchSegment
+          fetches={insight.fetches}
+          pathname={pathname}
+          server={server}
+          onRevalidate={onRevalidate}
+          isNew={isNew('fetch')}
+          onOpen={() => {
+            markSeen('fetch')
+            onProbeServer?.()
+          }}
+        />
       )}
 
       <Segment
@@ -966,15 +949,7 @@ function ActionsSegment({
 }) {
   const failed = calls.some(actionFailed)
   const [tag, setTag] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<{ ok: boolean; text: string }>()
-  const run = async (request: RevalidateRequest, label: string) => {
-    if (!onRevalidate) return
-    setBusy(true)
-    const error = await onRevalidate(request)
-    setBusy(false)
-    setMessage(error ? { ok: false, text: error } : { ok: true, text: `Revalidated ${label} and refreshed the page.` })
-  }
+  const { busy, message, run } = useRevalidateRun(onRevalidate)
   return (
     <Segment
       className="actions"
@@ -1034,10 +1009,7 @@ function ActionsSegment({
       })}
       <div className="sep-h" />
       {server?.status === 'missing' ? (
-        <div className="hint">
-          To revalidate from here and see action names instead of ids, add <code>app{SERVER_ROUTE}/route.ts</code> with{' '}
-          <code>export {'{ GET, POST }'} from '@angelitolm/next-toolbar/server'</code> and reload.
-        </div>
+        <ServerRouteHint why="To revalidate from here and see action names instead of ids" />
       ) : (
         <div className="reval">
           <span className="dim">Revalidate</span>
@@ -1065,7 +1037,152 @@ function ActionsSegment({
   )
 }
 
-// The app's server route: action names and revalidation. Probed when the actions panel opens,
+// Revalidates through the server route and reports the outcome under the buttons.
+function useRevalidateRun(onRevalidate?: (request: RevalidateRequest) => Promise<string | undefined>) {
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<{ ok: boolean; text: string }>()
+  const run = async (request: RevalidateRequest, label: string) => {
+    if (!onRevalidate) return
+    setBusy(true)
+    const error = await onRevalidate(request)
+    setBusy(false)
+    setMessage(error ? { ok: false, text: error } : { ok: true, text: `Revalidated ${label} and refreshed the page.` })
+  }
+  return { busy, message, run }
+}
+
+function ServerRouteHint({ why }: { why: string }) {
+  return (
+    <div className="hint">
+      {why}, add <code>app{SERVER_ROUTE}/route.ts</code> with <code>export {'{ GET, POST }'} from '@angelitolm/next-toolbar/server'</code> and
+      reload.
+    </div>
+  )
+}
+
+const freshnessLabel = (f: Freshness) =>
+  f.state === 'forever'
+    ? 'cached, no expiry'
+    : f.state === 'fresh'
+      ? `fresh · stale in ${shortDuration(f.seconds ?? 0)}`
+      : `stale for ${shortDuration(f.seconds ?? 0)}`
+
+// The request's server fetches, joined with the data cache so each one shows its tags and freshness,
+// react-query devtools style: a tag is the query key, revalidateTag is invalidateQueries.
+function FetchSegment({
+  fetches,
+  pathname,
+  server,
+  onRevalidate,
+  isNew,
+  onOpen,
+}: {
+  fetches: InsightFetch[]
+  pathname: string
+  server?: ServerState
+  onRevalidate?: (request: RevalidateRequest) => Promise<string | undefined>
+  isNew?: boolean
+  onOpen?: () => void
+}) {
+  const stats = fetchCacheStats(fetches)
+  const cache = server?.fetchCache ?? {}
+  const tags = pageTags(fetches, cache)
+  const { busy, message, run } = useRevalidateRun(onRevalidate)
+  const now = Date.now()
+  const revalidateTagButton = (tag: string) => (
+    <button
+      key={tag}
+      className="tag-btn"
+      disabled={busy || !onRevalidate}
+      onClick={() => run({ kind: 'tag', tag }, `tag "${tag}"`)}
+      title={`revalidateTag('${tag}', { expire: 0 }), then refresh the page`}
+    >
+      {tag}
+    </button>
+  )
+  return (
+    <Segment
+      isNew={isNew}
+      onOpen={onOpen}
+      label={
+        <>
+          <ArrangeHorizontal className="ico" />
+          <span className="dim hide-md">fetch</span>
+          <span className="count">{fetches.length}</span>
+          {stats.hitRate !== undefined && <span className="dim hide-md">{Math.round(stats.hitRate * 100)}% hit</span>}
+        </>
+      }
+    >
+      {fetches.length === 0 && <div className="hint">No server fetches for this request.</div>}
+      {stats.total > 0 && (
+        <div className="row">
+          <span>Cache</span>
+          <CacheSummary stats={stats} />
+        </div>
+      )}
+      {fetches.map((f, i) => {
+        const cached = f.url ? cache[f.url] : undefined
+        return (
+          <div key={i} className="fetch-row">
+            <div>
+              <span className="dim">{f.method ?? 'GET'} {f.statusCode ?? ''}</span>
+              <CachePill f={f} />
+              <span className="dim">{f.durationMs !== undefined && ms(f.durationMs)}</span>
+              {cached && <span className="dim">{freshnessLabel(freshness(cached, now))}</span>}
+              {cached && cached.tags.length > 0 && server?.status === 'ready' && (
+                <button
+                  className="icon-btn row-reval"
+                  disabled={busy || !onRevalidate}
+                  onClick={() => run({ kind: 'tags', tags: cached.tags }, cached.tags.map((t) => `"${t}"`).join(', '))}
+                  title={`Revalidate this fetch: ${cached.tags.map((t) => `revalidateTag('${t}')`).join(', ')}, then refresh the page`}
+                  aria-label={`Revalidate ${cached.tags.join(', ')}`}
+                >
+                  <Refresh2 size={14} />
+                </button>
+              )}
+            </div>
+            <code>{f.url}</code>
+            {cached && cached.tags.length > 0 && (
+              <div className="tags">
+                <span className="dim">tags</span>
+                {cached.tags.map((tag) => (
+                  <span key={tag} className="tag">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+      {fetches.length > 0 && (
+        <>
+          <div className="sep-h" />
+          {server?.status === 'missing' ? (
+            <ServerRouteHint why="To see each fetch's tags and revalidate them from here" />
+          ) : (
+            <div className="reval">
+              <span className="dim">Revalidate</span>
+              {tags.map(revalidateTagButton)}
+              <button className="text-btn" disabled={busy || !onRevalidate} onClick={() => run({ kind: 'path', path: pathname }, pathname)} title={`revalidatePath('${pathname}')`}>
+                This page
+              </button>
+            </div>
+          )}
+          {server?.status === 'ready' && tags.length === 0 && (
+            <div className="hint">
+              No tagged fetches here. Tag one with <code>{"fetch(url, { next: { tags: ['products'] } })"}</code> to revalidate just that data
+              instead of the whole page.
+            </div>
+          )}
+        </>
+      )}
+      {message && <div className={`hint ${message.ok ? '' : 'hint-err'}`}>{message.text}</div>}
+    </Segment>
+  )
+}
+
+// The app's server route: action names and revalidation. Probed when the actions or fetch panel opens,
 // not on load, so apps without it don't get a 404 in the console on every page.
 function useToolbarServer(refresh: () => void) {
   const [state, setState] = useState<ServerState>({ status: 'unknown', actionNames: {} })
@@ -1076,7 +1193,7 @@ function useToolbarServer(refresh: () => void) {
     if (missing.current) return // mounting it needs a reload anyway
     fetch(url, { headers: { [SERVER_HEADER]: '1' }, cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((json) => setState({ status: 'ready', actionNames: json?.actions ?? {} }))
+      .then((json) => setState({ status: 'ready', actionNames: json?.actions ?? {}, fetchCache: json?.fetchCache ?? {} }))
       .catch(() => {
         missing.current = true
         setState((s) => ({ ...s, status: 'missing' }))

@@ -1,4 +1,4 @@
-import type { ActionCall, ActionName, Advisory, LinkResult, ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
+import type { ActionCall, ActionName, Advisory, CachedFetch, LinkResult, ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
 
 // Fixed clock so server and client render the same data.
 const T0 = Date.UTC(2026, 8, 27, 10, 0, 0)
@@ -144,6 +144,13 @@ const BLOG_LINKS: LinkResult[] = [
   link('/docs/install', { status: 200 }),
   link('/about', { status: 200 }),
   link('/rss', { redirect: true }),
+]
+
+// The blog's data-cache entries as the server route reports them. Freshness is computed against
+// the reader's clock, so they're stored relative to when the demo mounted (see DemoPlayground).
+export const blogCache = (now: number): CachedFetch[] => [
+  { url: `${api}/posts/hello-world`, tags: ['posts', 'post:hello-world'], revalidate: 3600, storedAt: now - 21 * 60_000 },
+  { url: `${api}/authors/7`, tags: ['authors'], storedAt: now - 26 * 3_600_000 },
 ]
 
 // Newest first, as the toolbar records them.

@@ -9,13 +9,13 @@ The toolbar is a full-width strip floating 16 px above the bottom of the window.
 
 | # | Segment | What it shows | Hover panel |
 |---|---|---|---|
-| 1 | **Logo and version** | The NextToolbar mark and the installed NextToolbar version (`v0.4.0`, hidden when the bar runs out of room). Click the logo to minimize. | — |
+| 1 | **Logo and version** | The NextToolbar mark and the installed NextToolbar version (`v0.5.0`, hidden when the bar runs out of room). Click the logo to minimize. | — |
 | 2 | **Status** | HTTP status: gradient chip for 2xx, amber for 3xx, red for 4xx/5xx, grey `—` when unknown | Status and whether it came from a document request or a client navigation (RSC) |
 | 3 | **Request id** | First 6 characters of the server request id, or `profiler` when request insights are off | — Click opens the [profiler](./profiler) on this request |
 | 4 | **Route** | The route pattern that matched, e.g. `/blog/[slug]` | Pattern, real path and every `params.*` value |
 | 5 | **Render mode** | `Static`, `Dynamic`, `Static?`, `Rendering…` or `?` | Why, plus what dev can and can't tell. See [Render mode](./render-mode) |
 | 6 | **Timing** | `server`: server render time. `TTFB`: time to first byte of a full load. `nav`: duration of a client navigation's RSC request | Each value, and a hint to enable request insights if they're off |
-| 7 | **Fetch** | Server `fetch` calls and cache hit rate. Only with request insights | Cache summary and every fetch. See [Fetch cache](./fetch-cache) |
+| 7 | **Fetch** | Server `fetch` calls and cache hit rate. Only with request insights | Cache summary and every fetch with its freshness and tags; revalidate a fetch by its tags. See [Fetch cache](./fetch-cache) |
 | 8 | **Errors** | Client errors + server error of this page. Red when > 0 | Server errors (click → profiler) and client errors (expand → stack) |
 | 9 | **Actions** | Lightning and the number of Server Action calls. Red when one failed | Each call: status, time, what it revalidated, redirect; **Refresh page** and **Clear**. See [Server Actions](./server-actions) |
 | 10 | **SEO** | Magnifier and the number of metadata problems: red with errors, amber with warnings only | title, description, canonical, og:image, robots, JSON-LD and each finding. See [SEO](./seo) |

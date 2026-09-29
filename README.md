@@ -9,7 +9,7 @@
   <a href="https://www.npmjs.com/package/@angelitolm/next-toolbar#provenance"><img src="https://img.shields.io/badge/npm-provenance-2ea44f?logo=npm" alt="npm provenance"></a>
 </p>
 
-<p align="center"><a href="https://next-toolbar.angellm.dev/en/demo"><img src="./docs/public/demo.gif" width="880" alt="NextToolbar demo: render mode and fetch cache panels, SEO findings, a broken link check, Server Actions with revalidation, a 500 in the request profiler, security advisories and minimizing the bar"></a></p>
+<p align="center"><a href="https://next-toolbar.angellm.dev/en/demo"><img src="./docs/public/demo.gif" width="880" alt="NextToolbar demo: render mode and fetch cache panels, revalidating a fetch by its cache tag, SEO findings, a broken link check, Server Actions with revalidation, a 500 in the request profiler, security advisories and minimizing the bar"></a></p>
 
 ---
 
@@ -21,7 +21,7 @@ NextToolbar puts the answers in one place. While you run `next dev`, it sits at 
 - **Route pattern** that matched (`/blog/[slug]`)
 - **Render mode**: Static, Dynamic or `Static?`, correcting the cases where Next's dev indicator is wrong
 - **Timing**: server render time, TTFB, navigation time
-- **Server fetches** with their data-cache outcome (HIT / HMR / MISS / SKIP) and hit rate
+- **Server fetches** with their data-cache outcome (HIT / HMR / MISS / SKIP), hit rate, freshness and cache tags; revalidate a fetch by its tags, react-query devtools style
 - **Errors** on the client (with stack) and on the server (with the span where it started)
 - **Request profiler**: every request with summary, errors, fetches and a render timeline
 - **Server Actions**: every call with status, time, what it revalidated and where it redirected; revalidate paths and tags from the toolbar

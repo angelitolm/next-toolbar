@@ -37,8 +37,32 @@ Next adjunta un motivo a cada resultado. El profiler lo muestra junto a la píld
 ## Dónde lo ves
 
 - **Barra**: `fetch 3 · 67% hit` para la página actual.
-- **Panel de fetch** (al pasar el ratón): chips de resultado (`HIT 2 · SKIP 1`) y cada fetch con su resultado y tiempo.
+- **Panel de fetch** (al pasar el ratón): chips de resultado (`HIT 2 · SKIP 1`) y cada fetch con su resultado, tiempo, tags y frescura.
 - **Profiler**: una tabla por petición con resultado y motivo, y los totales de cada petición capturada en la cabecera.
+
+## Tags y revalidación
+
+Piensa en las devtools de react-query, pero en el servidor: el **tag** de un fetch es su query key, su `revalidate` es el stale time, y revalidar un tag es `invalidateQueries`.
+
+```tsx
+fetch(`${api}/products`, { next: { tags: ['products'], revalidate: 60 } })
+```
+
+Con la [ruta de servidor](./server-actions) montada, el panel de fetch muestra para cada fetch:
+
+- **Frescura**: `fresh · stale in 45s`, `stale for 12s`, o `cached, no expiry` para `force-cache`.
+- **Sus tags**, y un botón <kbd>↻</kbd> que ejecuta `revalidateTag(tag, { expire: 0 })` con ellos y refresca la página. Solo se vuelven a pedir los fetches con ese tag; el resto sigue en caché.
+- **This page** abajo: `revalidatePath` de la ruta actual, para los fetches sin tags.
+
+Para revalidar un tag que no está en la página actual, escríbelo en el [panel de Server Actions](./server-actions).
+
+Pruébalo: la lista de abajo hace de página y la barra al pie de la pantalla muestra sus fetches.
+
+<FetchCacheDemo />
+
+<Callout type="note">
+  Las request insights no traen los tags, así que la ruta de servidor los lee de la caché de datos de Next en disco (`.next/dev/cache/fetch-cache`) y la barra los cruza con los fetches de la página por URL. Los fetches con `cache: 'no-store'` nunca se guardan y no tienen tags. `'use cache'` con `cacheTag` vive en memoria y no se muestra.
+</Callout>
 
 ## Un ejemplo práctico
 

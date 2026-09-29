@@ -188,6 +188,14 @@ details[open] > summary > .chevron { transform: rotate(90deg); }
 .fetch-row:hover { background: var(--nt-raised); }
 .fetch-row > div { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .fetch-row code { display: block; word-break: break-all; line-height: 1.4; }
+.fetch-row .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0 0; }
+.tag-btn, .tag { height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--nt-border); color: var(--nt-accent); font: 600 11px var(--nt-mono); display: inline-flex; align-items: center; }
+.tag { border-style: dashed; }
+.tag-btn::before, .tag::before { content: '#'; opacity: .6; }
+.row-reval { width: 26px; height: 26px; margin-left: auto; color: var(--nt-accent); }
+.row-reval:disabled { opacity: .5; cursor: default; }
+.tag-btn:hover { background: var(--nt-hover); }
+.tag-btn:disabled { opacity: .6; cursor: default; }
 .error-item { display: block; width: 100%; padding: 8px 10px; border-radius: 7px; text-align: left; line-height: 1.4; }
 button.error-item { display: flex; align-items: baseline; gap: 10px; }
 .error-item:hover, .error-item[open] { background: var(--nt-err-bg); }
