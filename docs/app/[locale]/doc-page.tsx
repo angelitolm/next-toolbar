@@ -5,6 +5,8 @@ import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { ICONS, REPO_PUBLIC, editUrl, hrefOf, loadPage, neighbours, type Slug } from '@/lib/pages'
 
+const PAGES_WITH_DEMO: Slug[] = ['fetch-cache']
+
 export async function DocPage({ locale, slug }: { locale: Locale; slug: Slug }) {
   const t = await getTranslations({ locale })
   const Content = await loadPage(locale, slug)
@@ -62,8 +64,9 @@ export async function DocPage({ locale, slug }: { locale: Locale; slug: Slug }) 
         )}
       </nav>
 
-      {/* Dogfooding: the docs run with the toolbar they document (dev only). Not on /demo, which has its own. */}
-      <NextToolbar />
+      {/* Dogfooding: the docs run with the toolbar they document (dev only). Not on pages that render
+          a NextToolbarDemo (/demo, fetch-cache): two bars would stack at the bottom. */}
+      {!PAGES_WITH_DEMO.includes(slug) && <NextToolbar />}
     </article>
   )
 }

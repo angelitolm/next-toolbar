@@ -37,8 +37,32 @@ Next attaches a reason to each outcome. The profiler shows it next to the pill:
 ## Where you see it
 
 - **Toolbar**: `fetch 3 · 67% hit` for the current page.
-- **Fetch panel** (hover): outcome chips (`HIT 2 · SKIP 1`) and each fetch with its outcome and time.
+- **Fetch panel** (hover): outcome chips (`HIT 2 · SKIP 1`) and each fetch with its outcome, time, tags and freshness.
 - **Profiler**: a table per request with outcome and reason, and the totals of every captured request in the header.
+
+## Tags and revalidation
+
+Think react-query devtools, for the server: a fetch's **tag** is its query key, its `revalidate` is the stale time, and revalidating a tag is `invalidateQueries`.
+
+```tsx
+fetch(`${api}/products`, { next: { tags: ['products'], revalidate: 60 } })
+```
+
+With the [server route](./server-actions) mounted, the fetch panel shows for each fetch:
+
+- **Freshness**: `fresh · stale in 45s`, `stale for 12s`, or `cached, no expiry` for `force-cache`.
+- **Its tags**, and a <kbd>↻</kbd> button that runs `revalidateTag(tag, { expire: 0 })` for them and refreshes the page. Only fetches carrying the tag are fetched again; everything else stays cached.
+- **This page** at the bottom: `revalidatePath` for the current path, for fetches without tags.
+
+To revalidate a tag that isn't on the current page, type it in the [Server Actions panel](./server-actions).
+
+Try it: the list below plays the page, the toolbar at the bottom of the screen shows its fetches.
+
+<FetchCacheDemo />
+
+<Callout type="note">
+  Request insights don't carry tags, so the server route reads them from Next's data cache on disk (`.next/dev/cache/fetch-cache`) and the toolbar matches them to the page's fetches by URL. Fetches with `cache: 'no-store'` are never stored and have no tags. `'use cache'` with `cacheTag` lives in memory and isn't shown.
+</Callout>
 
 ## A worked example
 
