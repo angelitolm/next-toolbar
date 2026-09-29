@@ -94,6 +94,16 @@ Open any page. The toolbar appears as a strip across the bottom of the window:
 - click the request id (`# f9b45c`) to open the [profiler](./profiler);
 - click the logo or the close button to minimize it to a circle.
 
+## 6. Optional: the server route
+
+To revalidate paths and tags from the toolbar, and to see Server Action names instead of ids, add one route handler:
+
+```ts title="app/api/next-toolbar/route.ts"
+export { GET, POST } from '@angelitolm/next-toolbar/server'
+```
+
+It only answers in `next dev`. See [Server Actions](./server-actions#revalidate-from-the-toolbar).
+
 ## Production
 
 Nothing to do. The component checks `process.env.NODE_ENV !== 'development'` and returns `null`, so it renders nothing in production and never opens a connection. Because Next inlines `NODE_ENV` at build time, the minifier can drop the unreachable toolbar code as well. You don't need to import it conditionally.

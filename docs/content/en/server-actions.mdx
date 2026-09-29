@@ -35,13 +35,33 @@ The list lives in the browser: it survives client navigations and is lost on a f
 
 Calls `router.refresh()`: Next renders the current route again on the server and merges the result into the page, keeping client state (inputs, scroll, `useState`). It doesn't clear the data cache: cached `fetch` calls and `'use cache'` entries are reused. Use it to see the page after changing data outside the app (a database, a CMS).
 
+## Revalidate from the toolbar
+
+With the [server route](./configuration#server-route) mounted, the bottom of the panel revalidates the server cache and then refreshes the page:
+
+```ts title="app/api/next-toolbar/route.ts"
+export { GET, POST } from '@angelitolm/next-toolbar/server'
+```
+
+| Button | Runs on the server |
+|---|---|
+| **This page** | `revalidatePath(<current path>)` |
+| **Everything** | `revalidatePath('/', 'layout')`: every path |
+| **Tag** | `revalidateTag(<tag>, { expire: 0 })`: the tag expires now, the next request fetches fresh data |
+
+Type the tag you pass to `fetch(url, { next: { tags: [...] } })` or `cacheTag()`. The toolbar can't list them: the browser never sees them.
+
+The same route gives the toolbar the **names** of your Server Actions (`likePost` instead of `7f3a2c9d1e…`); hover a row to see the file it's defined in.
+
+Without the route, the panel shows how to add it.
+
 ## Where the data comes from
 
 Server Actions are `POST` requests that carry a `next-action` header with the action id. The toolbar wraps `window.fetch` while it's mounted (only in `next dev`) and records the requests that have that header. The response goes to Next untouched: the toolbar only reads its status and two headers, `x-action-revalidated` and `x-action-redirect`. Both formats are read: a number on Next.js 16, a `[paths, tag, cookie]` tuple on Next.js 15.
 
 ## What it doesn't do
 
-- **No action names**, only ids. The browser never sees the name; the map from id to function lives on the server (`.next/server/server-reference-manifest.json`). Request insights don't carry it either.
-- **No tags or paths**: Next only sends the client a flag, not which tags or paths were revalidated.
+- **No action names without the server route.** The browser only sees ids; the names live in Next's manifests on the server, which the [server route](./configuration#server-route) reads.
+- **No tags or paths** in the Revalidated column: Next only sends the client a flag, not which tags or paths were revalidated.
 - **No arguments or return values.** They travel in React's own format in the request and response bodies, which the toolbar doesn't read.
 - Actions called from other tabs, or with a `fetch` that isn't the global one, aren't seen.

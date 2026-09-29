@@ -635,3 +635,48 @@ export async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (it
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
   return out
 }
+
+// ── Server route (@angelitolm/next-toolbar/server) ────────────────────────────
+
+/** Where the app mounts the server route, under basePath. */
+export const SERVER_ROUTE = '/api/next-toolbar'
+/** Sent on every toolbar request to the server route; see server.ts for why. */
+export const SERVER_HEADER = 'x-next-toolbar'
+
+export type ActionName = { name: string; file?: string }
+
+// Merges Next's server-reference-manifest.json files into id -> export name. Next 15 (webpack)
+// writes one for the app, Next 16 (Turbopack) one per route; both use { node, edge } maps of
+// id -> { exportedName, filename }.
+export function actionNames(manifests: unknown[]): Record<string, ActionName> {
+  const out: Record<string, ActionName> = {}
+  for (const manifest of manifests) {
+    if (!manifest || typeof manifest !== 'object') continue
+    for (const runtime of ['node', 'edge'] as const) {
+      const entries = (manifest as Record<string, unknown>)[runtime]
+      if (!entries || typeof entries !== 'object') continue
+      for (const [id, entry] of Object.entries(entries as Record<string, { exportedName?: unknown; filename?: unknown }>)) {
+        if (typeof entry?.exportedName !== 'string') continue
+        out[id] = { name: entry.exportedName, file: typeof entry.filename === 'string' ? entry.filename : undefined }
+      }
+    }
+  }
+  return out
+}
+
+export type RevalidateRequest = { kind: 'path'; path: string; type?: 'page' | 'layout' } | { kind: 'tag'; tag: string }
+
+// Validates a POST body before it reaches revalidatePath / revalidateTag.
+// Next caps tags at 256 characters.
+export function parseRevalidate(body: unknown): RevalidateRequest | { error: string } {
+  const b = (body ?? {}) as Record<string, unknown>
+  if (b.kind === 'tag') {
+    return typeof b.tag === 'string' && b.tag.trim() && b.tag.length <= 256 ? { kind: 'tag', tag: b.tag.trim() } : { error: 'tag must be a non-empty string of up to 256 characters' }
+  }
+  if (b.kind === 'path') {
+    if (typeof b.path !== 'string' || !b.path.startsWith('/') || b.path.length > 1024) return { error: 'path must start with /' }
+    if (b.type !== undefined && b.type !== 'page' && b.type !== 'layout') return { error: "type must be 'page' or 'layout'" }
+    return { kind: 'path', path: b.path, type: b.type }
+  }
+  return { error: "kind must be 'path' or 'tag'" }
+}

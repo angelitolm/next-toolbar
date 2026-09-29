@@ -123,11 +123,11 @@ details[open] > summary > .chevron { transform: rotate(90deg); }
 
 /* Bar: full-width floating strip, grows out of the launcher position */
 .bar {
-  position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 2147483000;
-  height: 40px; padding: 6px; border-radius: 14px; display: flex; align-items: center; gap: 2px;
+  position: fixed; left: 16px; right: 16px; bottom: 8px; z-index: 2147483000;
+  height: 45px; padding: 6px; border-radius: 14px; display: flex; align-items: center; gap: 2px;
   transform-origin: 26px 50%; animation: nt-expand .28s cubic-bezier(.2, .8, .2, 1);
 }
-.logo-btn, .mark { width: 35px; height: 35px; flex-shrink: 0; border-radius: 10px; display: grid; place-items: center; background: var(--nt-mark-bg); color: var(--nt-logo); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08); }
+.logo-btn, .mark { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; display: grid; place-items: center; background: var(--nt-mark-bg); color: var(--nt-logo); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08); }
 .logo-btn:hover { filter: brightness(1.15); }
 .mark { width: 30px; height: 30px; border-radius: 8px; }
 .nt-version { padding: 0 4px 0 6px; font: 500 11px var(--nt-mono); color: var(--nt-dim); white-space: nowrap; }
@@ -211,6 +211,12 @@ button.error-item { display: flex; align-items: baseline; gap: 10px; }
 .act-row { display: grid; grid-template-columns: minmax(0, 1.6fr) 56px 56px minmax(0, 1.2fr); gap: 8px; align-items: baseline; padding: 6px 10px; border-radius: 7px; line-height: 1.35; }
 .act-row:hover:not(.act-cols) { background: var(--nt-raised); }
 .act-cols { font-size: 11px; padding-bottom: 2px; }
+.reval { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 10px 6px; }
+.reval > .dim { margin-right: 4px; }
+.reval form { display: flex; gap: 6px; }
+.reval input { height: 32px; width: 120px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--nt-border); background: var(--nt-raised); color: var(--nt-text); font: 12px var(--nt-mono); }
+.reval input:focus { outline: 2px solid var(--nt-to); outline-offset: 1px; }
+.hint-err { color: var(--nt-err); }
 .act-id { display: flex; flex-direction: column; min-width: 0; }
 .act-id > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seo .panel { min-width: 380px; max-width: min(460px, calc(100vw - 32px)); left: auto; right: 0; }

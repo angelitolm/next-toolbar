@@ -1,4 +1,4 @@
-import type { ActionCall, Advisory, LinkResult, ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
+import type { ActionCall, ActionName, Advisory, LinkResult, ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
 
 // Fixed clock so server and client render the same data.
 const T0 = Date.UTC(2026, 8, 27, 10, 0, 0)
@@ -153,6 +153,13 @@ const ACCOUNT_ACTIONS: ActionCall[] = [
   { id: 'c1', actionId: '7f3a2c9d1e5b8a4c6f0e2d7b9a1c3e5f8d0b2a4c6e', page: '/account', startTime: T0 - 90_000, durationMs: 124, status: 200, revalidation: 'all' },
 ]
 
+// What the server route reports: the demo shows names instead of ids, and the revalidate buttons.
+const ACCOUNT_ACTION_NAMES: Record<string, ActionName> = {
+  '40f1c9a7e2b84d0c6a5e3f1b9d7c2a8e4f6b0d3c19': { name: 'uploadAvatar', file: 'app/account/actions.ts' },
+  '00a8d3e61f5c7b9204e8a6c1d3f5b7092e4c6a8b1d': { name: 'refreshSession', file: 'app/account/actions.ts' },
+  '7f3a2c9d1e5b8a4c6f0e2d7b9a1c3e5f8d0b2a4c6e': { name: 'saveProfile', file: 'app/account/actions.ts' },
+}
+
 export type ScenarioId = 'home' | 'blog' | 'dashboard' | 'account' | 'checkout' | 'notFound' | 'settings' | 'outdated'
 
 export const SCENARIOS: { id: ScenarioId; props: NextToolbarDemoProps }[] = [
@@ -163,7 +170,7 @@ export const SCENARIOS: { id: ScenarioId; props: NextToolbarDemoProps }[] = [
   },
   // Next's dev data says static; the no-store fetch makes the toolbar report Dynamic, like `next build`.
   { id: 'dashboard', props: { pathname: '/dashboard', status: 200, timingMs: 251, via: 'rsc', isStatic: true, insights: ALL, advisories: [] } },
-  { id: 'account', props: { pathname: '/account', status: 200, timingMs: 44, via: 'rsc', isStatic: false, insights: ALL, advisories: [], actions: ACCOUNT_ACTIONS } },
+  { id: 'account', props: { pathname: '/account', status: 200, timingMs: 44, via: 'rsc', isStatic: false, insights: ALL, advisories: [], actions: ACCOUNT_ACTIONS, actionNames: ACCOUNT_ACTION_NAMES } },
   { id: 'checkout', props: { pathname: '/checkout', status: 500, timingMs: 3030, isStatic: true, insights: ALL, advisories: [] } },
   { id: 'notFound', props: { pathname: '/pricing/enterprise', status: 404, timingMs: 31, isStatic: true, insights: ALL, advisories: [] } },
   { id: 'settings', props: { pathname: '/settings', status: 200, timingMs: 35, via: 'rsc', isStatic: true, insights: ALL, clientErrors: [clientError], advisories: [] } },

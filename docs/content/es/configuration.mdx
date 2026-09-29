@@ -49,9 +49,28 @@ La barra guarda dos pequeñas preferencias en el `localStorage` del navegador, p
 | Clave | Valores | La establece |
 |---|---|---|
 | `next-toolbar:collapsed` | `'1'` o `'0'` | Minimizar / expandir la barra |
+| `next-toolbar:seen` | Lista JSON de nombres de segmentos | Abrir un segmento que tiene la etiqueta **new** |
 | `next-toolbar:theme` | `'system'`, `'light'`, `'dark'` | El botón de tema |
 
 Bórralas para volver a los valores por defecto. Si `localStorage` no está disponible (modo privado, almacenamiento bloqueado), la barra sigue funcionando y simplemente no recuerda nada.
+
+## Ruta de servidor
+
+Opcional. `@angelitolm/next-toolbar/server` exporta dos route handlers; móntalos en `/api/next-toolbar`:
+
+```ts title="app/api/next-toolbar/route.ts"
+export { GET, POST } from '@angelitolm/next-toolbar/server'
+```
+
+| Método | Hace |
+|---|---|
+| `GET` | Devuelve los nombres de las Server Actions, leídos de los archivos `server-reference-manifest.json` de Next en `.next`. |
+| `POST` | Ejecuta `revalidatePath` o `revalidateTag` con lo que envía la barra. |
+
+- Los dos responden **404 fuera de `next dev`**, así que desplegar el archivo no tiene riesgo.
+- También responden 404 si la petición no lleva la cabecera `x-next-toolbar`. Los navegadores solo mandan una cabecera propia a otro origen después de una petición CORS previa, que esta ruta nunca aprueba, así que otra web abierta en tu navegador no puede llamarla.
+- La ruta es fija. Si un `middleware`/`proxy` protege `/api`, deja pasar `/api/next-toolbar` en desarrollo.
+- Lee los manifests de `.next` en el directorio donde se ejecuta `next dev`: con un `distDir` propio no encontrará los nombres de las actions (revalidar sigue funcionando).
 
 ## Error boundary
 

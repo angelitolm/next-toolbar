@@ -35,13 +35,33 @@ La lista vive en el navegador: sobrevive a las navegaciones en el cliente y se p
 
 Llama a `router.refresh()`: Next vuelve a renderizar la ruta actual en el servidor y mezcla el resultado con la página, conservando el estado del cliente (inputs, scroll, `useState`). No vacía la caché de datos: las llamadas `fetch` en caché y las entradas de `'use cache'` se reutilizan. Sirve para ver la página después de cambiar datos fuera de la app (una base de datos, un CMS).
 
+## Revalidar desde la barra
+
+Con la [ruta de servidor](./configuration#ruta-de-servidor) montada, la parte de abajo del panel revalida la caché del servidor y después refresca la página:
+
+```ts title="app/api/next-toolbar/route.ts"
+export { GET, POST } from '@angelitolm/next-toolbar/server'
+```
+
+| Botón | Ejecuta en el servidor |
+|---|---|
+| **This page** | `revalidatePath(<ruta actual>)` |
+| **Everything** | `revalidatePath('/', 'layout')`: todas las rutas |
+| **Tag** | `revalidateTag(<tag>, { expire: 0 })`: el tag caduca ya, la siguiente petición trae datos nuevos |
+
+Escribe el tag que pasas a `fetch(url, { next: { tags: [...] } })` o a `cacheTag()`. La barra no puede listarlos: el navegador nunca los ve.
+
+La misma ruta le da a la barra los **nombres** de tus Server Actions (`likePost` en lugar de `7f3a2c9d1e…`); pasa el ratón por una fila para ver el archivo donde está definida.
+
+Sin la ruta, el panel explica cómo añadirla.
+
 ## De dónde salen los datos
 
 Las Server Actions son peticiones `POST` con una cabecera `next-action` que lleva el id de la action. La barra envuelve `window.fetch` mientras está montada (solo en `next dev`) y registra las peticiones que llevan esa cabecera. La respuesta llega a Next intacta: la barra solo lee su estado y dos cabeceras, `x-action-revalidated` y `x-action-redirect`. Lee los dos formatos: un número en Next.js 16 y una tupla `[paths, tag, cookie]` en Next.js 15.
 
 ## Qué no hace
 
-- **No muestra el nombre de la action**, solo el id. El navegador nunca ve el nombre; la relación entre id y función vive en el servidor (`.next/server/server-reference-manifest.json`). Las request insights tampoco lo traen.
-- **No muestra tags ni rutas**: Next solo manda al cliente un indicador, no qué tags o rutas se revalidaron.
+- **No muestra el nombre de la action sin la ruta de servidor.** El navegador solo ve ids; los nombres están en los manifests de Next en el servidor, que lee la [ruta de servidor](./configuration#ruta-de-servidor).
+- **No muestra tags ni rutas** en la columna Revalidated: Next solo manda al cliente un indicador, no qué tags o rutas se revalidaron.
 - **No muestra argumentos ni valores devueltos.** Viajan en el formato propio de React en el cuerpo de la petición y de la respuesta, que la barra no lee.
 - No ve las actions llamadas desde otras pestañas, ni las que usan un `fetch` que no sea el global.

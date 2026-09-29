@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { compareVersions, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { compareVersions, actionNames, parseRevalidate, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -321,4 +321,23 @@ test('mapLimit caps concurrency and keeps order', async () => {
   assert.deepEqual(out, [0, 1, 2, 3, 4])
   assert.equal(peak, 2)
   assert.deepEqual(await mapLimit([], 3, async () => 1), [])
+})
+
+test('actionNames merges Next 15 and 16 manifests, node and edge', () => {
+  const next16 = { node: { a1: { workers: {}, exportedName: 'like', filename: 'app/actions.ts' } }, edge: {} }
+  const next15 = { node: { b2: { workers: {}, layer: {}, exportedName: 'save' } }, edge: { c3: { exportedName: 'edgeAction', filename: 'app/e.ts' } } }
+  assert.deepEqual(actionNames([next16, next15, null, 'x', { node: { d4: {} } }]), {
+    a1: { name: 'like', file: 'app/actions.ts' },
+    b2: { name: 'save', file: undefined },
+    c3: { name: 'edgeAction', file: 'app/e.ts' },
+  })
+})
+
+test('parseRevalidate accepts paths and tags, rejects the rest', () => {
+  assert.deepEqual(parseRevalidate({ kind: 'path', path: '/blog/hola' }), { kind: 'path', path: '/blog/hola', type: undefined })
+  assert.deepEqual(parseRevalidate({ kind: 'path', path: '/', type: 'layout' }), { kind: 'path', path: '/', type: 'layout' })
+  assert.deepEqual(parseRevalidate({ kind: 'tag', tag: ' posts ' }), { kind: 'tag', tag: 'posts' })
+  for (const bad of [null, {}, { kind: 'path', path: 'blog' }, { kind: 'path', path: '/', type: 'all' }, { kind: 'tag', tag: '' }, { kind: 'tag', tag: 'x'.repeat(257) }, { kind: 'tag', tag: 1 }]) {
+    assert.ok('error' in parseRevalidate(bad), JSON.stringify(bad))
+  }
 })

@@ -94,6 +94,16 @@ Abre cualquier página. La barra aparece como una franja a lo largo de la parte 
 - haz clic en el id de la petición (`# f9b45c`) para abrir el [profiler](./profiler);
 - haz clic en el logo o en el botón de cerrar para minimizarla a un círculo.
 
+## 6. Opcional: la ruta de servidor
+
+Para revalidar rutas y tags desde la barra, y ver el nombre de las Server Actions en lugar de su id, añade un route handler:
+
+```ts title="app/api/next-toolbar/route.ts"
+export { GET, POST } from '@angelitolm/next-toolbar/server'
+```
+
+Solo responde en `next dev`. Consulta [Server Actions](./server-actions#revalidar-desde-la-barra).
+
 ## Producción
 
 No tienes que hacer nada. El componente comprueba `process.env.NODE_ENV !== 'development'` y devuelve `null`, así que no renderiza nada en producción y nunca abre una conexión. Como Next incrusta `NODE_ENV` en tiempo de build, el minificador también puede eliminar el código inalcanzable de la barra. No necesitas importarla de forma condicional.

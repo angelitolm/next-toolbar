@@ -24,6 +24,9 @@ NextToolbar puts the answers in one place. While you run `next dev`, it sits at 
 - **Server fetches** with their data-cache outcome (HIT / HMR / MISS / SKIP) and hit rate
 - **Errors** on the client (with stack) and on the server (with the span where it started)
 - **Request profiler**: every request with summary, errors, fetches and a render timeline
+- **Server Actions**: every call with status, time, what it revalidated and where it redirected; revalidate paths and tags from the toolbar
+- **SEO**: the title, description, canonical, Open Graph image and JSON-LD that reached the page, with what's missing or broken
+- **Broken links**: checks the page's internal links on demand and outlines the broken ones
 - **Security**: known vulnerabilities of your Next.js version (GitHub advisories) and what to upgrade to
 - Light and dark themes, minimizes to a circle, zero runtime dependencies
 
@@ -59,6 +62,13 @@ const nextConfig = {
   devIndicators: { position: 'top-right' },
   experimental: { requestInsights: true },
 }
+```
+
+Optional: to revalidate paths and tags from the toolbar and see Server Action names, add a route handler. It only answers in `next dev`.
+
+```ts
+// app/api/next-toolbar/route.ts
+export { GET, POST } from '@angelitolm/next-toolbar/server'
 ```
 
 Requires Next.js 15+ (App Router) and React 19.

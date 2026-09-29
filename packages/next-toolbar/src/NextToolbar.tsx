@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
+import { type ActionName, type RevalidateRequest, SERVER_HEADER, SERVER_ROUTE, type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
 import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Flash, Hashtag, Link21, Monitor, Moon, Refresh2, Routing2, SearchNormal1, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { VERSION } from './version'
@@ -60,15 +60,18 @@ function Toolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securit
   const [actions, setActions] = useServerActions()
   const [links, checkLinks] = useLinkCheck(pathname)
   const router = useRouter()
+  const [server, probeServer, revalidate] = useToolbarServer(router.refresh)
 
   return (
     <ToolbarView
       defaultTheme={defaultTheme}
-      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo, actions, links }}
+      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo, actions, links, server }}
       onRefreshSecurity={refreshSecurity}
       onRefreshPage={() => router.refresh()}
       onClearActions={() => setActions([])}
       onCheckLinks={checkLinks}
+      onProbeServer={probeServer}
+      onRevalidate={revalidate}
       onClear={(keepId) => {
         clear(keepId)
         setErrors([])
@@ -101,6 +104,14 @@ export type ToolbarData = {
   actions?: ActionCall[]
   /** Result of the on-demand link check. Omit to hide the segment. */
   links?: LinksState
+  /** The app's server route (@angelitolm/next-toolbar/server), if mounted. */
+  server?: ServerState
+}
+
+export type ServerState = {
+  /** 'unknown' until the actions panel is first opened. */
+  status: 'unknown' | 'missing' | 'ready'
+  actionNames: Record<string, ActionName>
 }
 
 export type LinksState = {
@@ -133,10 +144,14 @@ type ViewProps = {
   onClearActions?: () => void
   /** Starts (or restarts) the link check. Omit to hide the button. */
   onCheckLinks?: () => void
+  /** Asks the server route for action names (and whether it's mounted at all). */
+  onProbeServer?: () => void
+  /** Revalidates through the server route, then refreshes the page. Resolves to an error message, if any. */
+  onRevalidate?: (request: RevalidateRequest) => Promise<string | undefined>
 }
 
-export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, onRefreshPage, onClearActions, onCheckLinks }: ViewProps) {
-  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo, actions, links } = data
+export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, onRefreshPage, onClearActions, onCheckLinks, onProbeServer, onRevalidate }: ViewProps) {
+  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo, actions, links, server } = data
   const root = useShadowRoot()
   const [collapsed, setCollapsed] = useState(false)
   const [profiler, setProfiler] = useState<{ open: boolean; id?: string }>({ open: false })
@@ -343,7 +358,21 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
         ))}
       </Segment>
 
-      {actions && <ActionsSegment calls={actions} onRefreshPage={onRefreshPage} onClear={onClearActions} isNew={isNew('actions')} onOpen={() => markSeen('actions')} />}
+      {actions && (
+        <ActionsSegment
+          calls={actions}
+          pathname={pathname}
+          server={server}
+          onRefreshPage={onRefreshPage}
+          onClear={onClearActions}
+          onRevalidate={onRevalidate}
+          isNew={isNew('actions')}
+          onOpen={() => {
+            markSeen('actions')
+            onProbeServer?.()
+          }}
+        />
+      )}
       {seo && <SeoSegment seo={seo} isNew={isNew('seo')} onOpen={() => markSeen('seo')} />}
       {links && <LinksSegment links={links} onCheck={onCheckLinks} isNew={isNew('links')} onOpen={() => markSeen('links')} />}
 
@@ -890,18 +919,34 @@ const revalidationLabel = { none: '—', all: 'static + dynamic', dynamic: 'dyna
 
 function ActionsSegment({
   calls,
+  pathname,
+  server,
   onRefreshPage,
   onClear,
+  onRevalidate,
   isNew,
   onOpen,
 }: {
   calls: ActionCall[]
+  pathname: string
+  server?: ServerState
   onRefreshPage?: () => void
   onClear?: () => void
+  onRevalidate?: (request: RevalidateRequest) => Promise<string | undefined>
   isNew?: boolean
   onOpen?: () => void
 }) {
   const failed = calls.some(actionFailed)
+  const [tag, setTag] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<{ ok: boolean; text: string }>()
+  const run = async (request: RevalidateRequest, label: string) => {
+    if (!onRevalidate) return
+    setBusy(true)
+    const error = await onRevalidate(request)
+    setBusy(false)
+    setMessage(error ? { ok: false, text: error } : { ok: true, text: `Revalidated ${label} and refreshed the page.` })
+  }
   return (
     <Segment
       className="actions"
@@ -935,30 +980,100 @@ function ActionsSegment({
           <span>Revalidated</span>
         </div>
       )}
-      {calls.map((call) => (
-        <div key={call.id} className="act-row" title={`Action id ${call.actionId}
-Called from ${call.page}`}>
-          <span className="act-id">
-            <code>{call.actionId.slice(0, 10)}…</code>
-            <span className="dim">{call.page}</span>
-          </span>
-          <span>
-            {call.durationMs === undefined ? (
-              <span className="dim">…</span>
-            ) : (
-              <span className={`pill ${actionFailed(call) ? 'err' : 'ok'}`}>{call.error ? 'failed' : call.status}</span>
-            )}
-          </span>
-          <span className="dim">{call.durationMs !== undefined && ms(call.durationMs)}</span>
-          <span>
-            {call.revalidation ? revalidationLabel[call.revalidation] : call.durationMs === undefined ? '' : '?'}
-            {call.redirect && <span className="dim"> → {call.redirect}</span>}
-            {call.error && <span className="dim"> {call.error}</span>}
-          </span>
+      {calls.map((call) => {
+        const known = server?.actionNames[call.actionId]
+        return (
+          <div key={call.id} className="act-row" title={`Action id ${call.actionId}\nCalled from ${call.page}${known?.file ? `\nDefined in ${known.file}` : ''}`}>
+            <span className="act-id">
+              <code>{known?.name ?? `${call.actionId.slice(0, 10)}…`}</code>
+              <span className="dim">{call.page}</span>
+            </span>
+            <span>
+              {call.durationMs === undefined ? (
+                <span className="dim">…</span>
+              ) : (
+                <span className={`pill ${actionFailed(call) ? 'err' : 'ok'}`}>{call.error ? 'failed' : call.status}</span>
+              )}
+            </span>
+            <span className="dim">{call.durationMs !== undefined && ms(call.durationMs)}</span>
+            <span>
+              {call.revalidation ? revalidationLabel[call.revalidation] : call.durationMs === undefined ? '' : '?'}
+              {call.redirect && <span className="dim"> → {call.redirect}</span>}
+              {call.error && <span className="dim"> {call.error}</span>}
+            </span>
+          </div>
+        )
+      })}
+      <div className="sep-h" />
+      {server?.status === 'missing' ? (
+        <div className="hint">
+          To revalidate from here and see action names instead of ids, add <code>app{SERVER_ROUTE}/route.ts</code> with{' '}
+          <code>export {'{ GET, POST }'} from '@angelitolm/next-toolbar/server'</code> and reload.
         </div>
-      ))}
+      ) : (
+        <div className="reval">
+          <span className="dim">Revalidate</span>
+          <button className="text-btn" disabled={busy || !onRevalidate} onClick={() => run({ kind: 'path', path: pathname }, pathname)} title={`revalidatePath('${pathname}')`}>
+            This page
+          </button>
+          <button className="text-btn" disabled={busy || !onRevalidate} onClick={() => run({ kind: 'path', path: '/', type: 'layout' }, 'every path')} title="revalidatePath('/', 'layout')">
+            Everything
+          </button>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (tag.trim()) run({ kind: 'tag', tag: tag.trim() }, `tag "${tag.trim()}"`)
+            }}
+          >
+            <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="tag" aria-label="Tag to revalidate" />
+            <button className="text-btn" disabled={busy || !onRevalidate || !tag.trim()} title="revalidateTag(tag, { expire: 0 })">
+              Tag
+            </button>
+          </form>
+        </div>
+      )}
+      {message && <div className={`hint ${message.ok ? '' : 'hint-err'}`}>{message.text}</div>}
     </Segment>
   )
+}
+
+// The app's server route: action names and revalidation. Probed when the actions panel opens,
+// not on load, so apps without it don't get a 404 in the console on every page.
+function useToolbarServer(refresh: () => void) {
+  const [state, setState] = useState<ServerState>({ status: 'unknown', actionNames: {} })
+  const missing = useRef(false)
+  const url = BASE_PATH + SERVER_ROUTE
+
+  const probe = useCallback(() => {
+    if (missing.current) return // mounting it needs a reload anyway
+    fetch(url, { headers: { [SERVER_HEADER]: '1' }, cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((json) => setState({ status: 'ready', actionNames: json?.actions ?? {} }))
+      .catch(() => {
+        missing.current = true
+        setState((s) => ({ ...s, status: 'missing' }))
+      })
+  }, [url])
+
+  const revalidate = useCallback(
+    async (request: RevalidateRequest) => {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { [SERVER_HEADER]: '1', 'content-type': 'application/json' },
+          body: JSON.stringify(request),
+        })
+        if (!res.ok) return (await res.json().catch(() => null))?.error ?? `The server route answered ${res.status}.`
+        refresh()
+        return undefined
+      } catch (e) {
+        return e instanceof Error ? e.message : String(e)
+      }
+    },
+    [url, refresh],
+  )
+
+  return [state, probe, revalidate] as const
 }
 
 const LINK_CONCURRENCY = 3
