@@ -1,7 +1,7 @@
 {
   "name": "@angelitolm/next-toolbar",
-  "version": "0.3.4",
-  "description": "Floating debug toolbar for the Next.js App Router (dev only): status, route, render mode, timings, fetch cache and a request profiler",
+  "version": "0.4.0",
+  "description": "Floating debug toolbar for the Next.js App Router (dev only): status, route, render mode, timings, fetch cache, request profiler, Server Actions with revalidation, SEO metadata, broken links and security advisories",
   "keywords": [
     "nextjs",
     "next",
@@ -10,7 +10,21 @@
     "devtools",
     "profiler",
     "app-router",
-    "react"
+    "react",
+    "server-actions",
+    "revalidate",
+    "cache",
+    "fetch-cache",
+    "rendering",
+    "seo",
+    "metadata",
+    "open-graph",
+    "json-ld",
+    "broken-links",
+    "link-checker",
+    "security",
+    "vulnerabilities",
+    "performance"
   ],
   "author": "Angel Labrada Massó",
   "license": "MIT",

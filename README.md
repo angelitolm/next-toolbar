@@ -9,7 +9,7 @@
   <a href="https://www.npmjs.com/package/@angelitolm/next-toolbar#provenance"><img src="https://img.shields.io/badge/npm-provenance-2ea44f?logo=npm" alt="npm provenance"></a>
 </p>
 
-<p align="center"><a href="https://next-toolbar.angellm.dev/en/demo"><img src="./docs/public/demo.gif" width="880" alt="NextToolbar demo: render mode and fetch cache panels, a 500 in the request profiler, security advisories and minimizing the bar"></a></p>
+<p align="center"><a href="https://next-toolbar.angellm.dev/en/demo"><img src="./docs/public/demo.gif" width="880" alt="NextToolbar demo: render mode and fetch cache panels, SEO findings, a broken link check, Server Actions with revalidation, a 500 in the request profiler, security advisories and minimizing the bar"></a></p>
 
 ---
 

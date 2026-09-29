@@ -5,7 +5,7 @@
 <a href="https://github.com/angelitolm/next-toolbar/actions/workflows/ci.yml"><img src="https://github.com/angelitolm/next-toolbar/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 <a href="https://www.npmjs.com/package/@angelitolm/next-toolbar#provenance"><img src="https://img.shields.io/badge/npm-provenance-2ea44f?logo=npm" alt="npm provenance"></a>
 
-<a href="https://next-toolbar.angellm.dev/en/demo"><img src="https://next-toolbar.angellm.dev/demo.gif" width="880" alt="NextToolbar demo: render mode and fetch cache panels, a 500 in the request profiler, security advisories and minimizing the bar"></a>
+<a href="https://next-toolbar.angellm.dev/en/demo"><img src="https://next-toolbar.angellm.dev/demo.gif" width="880" alt="NextToolbar demo: render mode and fetch cache panels, SEO findings, a broken link check, Server Actions with revalidation, a 500 in the request profiler, security advisories and minimizing the bar"></a>
 
 A floating debug toolbar for the Next.js App Router. It answers the questions you ask all day while building (did this page return a 200? is it static? why is it slow? did that fetch hit the cache?) without switching to DevTools or the terminal. Dev only: renders nothing in production builds.
 
