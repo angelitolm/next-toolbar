@@ -123,8 +123,8 @@
       },
       "blog": {
         "title": "Post del blog",
-        "description": "Un segmento dinámico con dos fetches en caché, al que se llega navegando en el cliente.",
-        "expect": "Static? · 2 HIT"
+        "description": "Un segmento dinámico con dos fetches en caché y con tags, al que se llega navegando en el cliente.",
+        "expect": "Static? · 2 HIT · #posts #authors"
       },
       "dashboard": {
         "title": "Dashboard",

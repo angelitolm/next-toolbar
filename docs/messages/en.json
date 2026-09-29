@@ -123,8 +123,8 @@
       },
       "blog": {
         "title": "Blog post",
-        "description": "A dynamic segment with two cached fetches, reached by client navigation.",
-        "expect": "Static? · 2 HIT"
+        "description": "A dynamic segment with two cached, tagged fetches, reached by client navigation.",
+        "expect": "Static? · 2 HIT · #posts #authors"
       },
       "dashboard": {
         "title": "Dashboard",
