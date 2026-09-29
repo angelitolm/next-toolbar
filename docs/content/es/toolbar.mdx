@@ -9,7 +9,7 @@ La barra es una franja de ancho completo que flota 16 px por encima de la parte 
 
 | # | Segmento | Qué muestra | Panel al pasar el ratón |
 |---|---|---|---|
-| 1 | **Logo y versión** | La marca de NextToolbar y la versión instalada de NextToolbar (`v0.3.4`, oculta en pantallas pequeñas). Haz clic en el logo para minimizar. | — |
+| 1 | **Logo y versión** | La marca de NextToolbar y la versión instalada de NextToolbar (`v0.3.4`, oculta cuando a la barra le falta espacio). Haz clic en el logo para minimizar. | — |
 | 2 | **Estado** | Estado HTTP: chip con degradado para 2xx, ámbar para 3xx, rojo para 4xx/5xx, gris `—` cuando se desconoce | El estado y si vino de una petición de documento o de una navegación en el cliente (RSC) |
 | 3 | **Id de petición** | Los 6 primeros caracteres del id de la petición en el servidor, o `profiler` cuando las request insights están desactivadas | — Al hacer clic abre el [profiler](./profiler) en esta petición |
 | 4 | **Ruta** | El patrón de ruta que coincidió, p. ej. `/blog/[slug]` | Patrón, ruta real y cada valor de `params.*` |
@@ -69,11 +69,15 @@ La barra sigue por defecto la preferencia clara/oscura del sistema operativo. El
 
 ## Comportamiento responsive
 
-| Viewport | Comportamiento |
+La barra se mide a sí misma en lugar de usar anchos fijos: lo que cabe depende de los segmentos que muestra la página. Solo oculta lo necesario, y lo vuelve a mostrar cuando la ventana crece.
+
+| Cuándo | Comportamiento |
 |---|---|
-| más de 1024 px | Todo visible |
-| hasta 1024 px | Oculta la versión de Next, las etiquetas `fetch` / `errors`, el valor TTFB/nav cuando hay tiempo del servidor disponible y la etiqueta `% hit` |
-| hasta 640 px | Márgenes de 8 px; la barra se desplaza horizontalmente. El logo de la izquierda siempre la minimiza |
+| Cabe todo | Todo visible |
+| No cabe | Compacta: oculta las etiquetas de texto (`fetch`, `errors`, `actions`, `SEO`, `links`, `secure`…), la etiqueta `% hit`, el valor TTFB/nav cuando hay tiempo del servidor disponible y el segmento con la versión de Next |
+| Sigue sin caber | Oculta también la versión de NextToolbar junto al logo |
+| Sigue sin caber | La barra se desplaza horizontalmente, sin las etiquetas **new**. El logo de la izquierda siempre la minimiza |
+| Hasta 640 px | Márgenes de 8 px |
 
 ## Teclado y accesibilidad
 

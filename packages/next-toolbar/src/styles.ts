@@ -305,10 +305,14 @@ td code { word-break: break-all; }
 @keyframes nt-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .bar, .launcher, .panel, .profiler { animation: none; } .launcher { transition: none; } }
 
-@media (max-width: 1024px) {
-  .hide-md { display: none; }
-  .seg { padding: 0 9px; }
-}
+/* Set by useBarDensity when the bar doesn't fit on one line. */
+.bar.compact .hide-md { display: none; }
+.bar.compact .seg { padding: 0 9px; }
+.bar.tight .hide-sm { display: none; }
+.bar.tight .seg { padding: 0 7px; }
+.bar.scroll { overflow-x: auto; scrollbar-width: none; }
+.bar.scroll::-webkit-scrollbar { display: none; }
+.bar.scroll .new-badge { display: none; } /* would be clipped */
 
 @media (max-width: 640px) {
   .bar { left: 8px; right: 8px; bottom: 8px; overflow-x: auto; scrollbar-width: none; }

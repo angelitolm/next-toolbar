@@ -9,7 +9,7 @@ The toolbar is a full-width strip floating 16 px above the bottom of the window.
 
 | # | Segment | What it shows | Hover panel |
 |---|---|---|---|
-| 1 | **Logo and version** | The NextToolbar mark and the installed NextToolbar version (`v0.3.4`, hidden on small screens). Click the logo to minimize. | — |
+| 1 | **Logo and version** | The NextToolbar mark and the installed NextToolbar version (`v0.3.4`, hidden when the bar runs out of room). Click the logo to minimize. | — |
 | 2 | **Status** | HTTP status: gradient chip for 2xx, amber for 3xx, red for 4xx/5xx, grey `—` when unknown | Status and whether it came from a document request or a client navigation (RSC) |
 | 3 | **Request id** | First 6 characters of the server request id, or `profiler` when request insights are off | — Click opens the [profiler](./profiler) on this request |
 | 4 | **Route** | The route pattern that matched, e.g. `/blog/[slug]` | Pattern, real path and every `params.*` value |
@@ -69,11 +69,15 @@ The toolbar follows the OS light/dark preference by default. The theme button cy
 
 ## Responsive behavior
 
-| Viewport | Behavior |
+The bar measures itself instead of using fixed breakpoints: how much fits depends on which segments the page shows. It steps down only as far as it needs to, and back up when the window grows.
+
+| When | Behavior |
 |---|---|
-| wider than 1024 px | Everything visible |
-| up to 1024 px | Hides the Next version, the `fetch` / `errors` labels, the TTFB/nav value when server time is available, and the `% hit` label |
-| up to 640 px | 8 px margins; the bar scrolls horizontally. The logo on the left always minimizes it |
+| Everything fits | Everything visible |
+| It doesn't fit | Compact: hides the text labels (`fetch`, `errors`, `actions`, `SEO`, `links`, `secure`…), the `% hit` label, the TTFB/nav value when server time is available, and the Next version segment |
+| Still doesn't fit | Also hides the NextToolbar version next to the logo |
+| Still doesn't fit | The bar scrolls horizontally, without the **new** badges. The logo on the left always minimizes it |
+| Up to 640 px | 8 px margins |
 
 ## Keyboard and accessibility
 

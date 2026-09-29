@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname, useRouter } from 'next/navigation'
 import { type ActionName, type RevalidateRequest, SERVER_HEADER, SERVER_ROUTE, type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
@@ -153,6 +153,7 @@ type ViewProps = {
 export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, onRefreshPage, onClearActions, onCheckLinks, onProbeServer, onRevalidate }: ViewProps) {
   const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo, actions, links, server } = data
   const root = useShadowRoot()
+  const [barRef, density] = useBarDensity()
   const [collapsed, setCollapsed] = useState(false)
   const [profiler, setProfiler] = useState<{ open: boolean; id?: string }>({ open: false })
   const closeProfiler = useCallback(() => setProfiler((p) => ({ ...p, open: false })), [])
@@ -216,7 +217,7 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
       {errorCount > 0 ? <span className="bubble">{errorCount}</span> : <span className={`dot ${statusClass}`} />}
     </button>
   ) : (
-    <div className="bar" role="toolbar" aria-label="NextToolbar">
+    <div ref={barRef} className={`bar ${density}`} role="toolbar" aria-label="NextToolbar">
       <button className="logo-btn" onClick={() => toggle(true)} title={`NextToolbar v${VERSION} · Minimize`} aria-label="Minimize NextToolbar">
         <Logo size={26} />
       </button>
@@ -495,6 +496,33 @@ function useNewSegments() {
   }, [])
   const isNew = (key: string) => seen !== null && NEW_SEGMENTS.includes(key) && !seen.includes(key)
   return [isNew, markSeen] as const
+}
+
+const DENSITIES = ['', 'compact', 'compact tight', 'compact tight scroll'] as const
+
+// How much the bar hides so it fits on one line: labels first (.hide-md), then extras (.hide-sm),
+// and as a last resort it scrolls sideways, as on phones.
+// Depends on the segments shown, not just the viewport, so it measures instead of using breakpoints.
+// Steps back up only once the bar is as wide as the content was at that level, so it doesn't flicker.
+function useBarDensity() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [level, setLevel] = useState(0)
+  const widths = useRef<number[]>([])
+  // Every render: new data can add or remove segments. Layout effect, so changes land before paint.
+  useLayoutEffect(() => {
+    const bar = ref.current
+    if (!bar) return
+    const check = () => {
+      widths.current[level] = bar.scrollWidth
+      if (bar.scrollWidth > bar.clientWidth + 1 && level < DENSITIES.length - 1) setLevel(level + 1)
+      else if (level > 0 && bar.clientWidth >= (widths.current[level - 1] ?? Infinity)) setLevel(level - 1)
+    }
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(bar)
+    return () => observer.disconnect()
+  })
+  return [ref, DENSITIES[level]] as const
 }
 
 // Isolates toolbar CSS from the app (and vice versa).
