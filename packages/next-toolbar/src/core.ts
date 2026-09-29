@@ -579,3 +579,59 @@ export function parseActionRevalidated(header: string | null): ActionRevalidatio
 export const parseActionRedirect = (header: string | null) => header?.split(';')[0] || undefined
 
 export const actionFailed = (call: ActionCall) => call.error !== undefined || (call.status !== undefined && call.status >= 400)
+
+// ── Links ─────────────────────────────────────────────────────────────────────
+
+export type LinkResult = {
+  /** Absolute URL without the hash: what gets requested, and the key to find its anchors. */
+  url: string
+  /** Pathname and search without basePath, for display. */
+  path: string
+  status?: number
+  /** Answered with a redirect; not followed (see useLinkCheck). */
+  redirect?: boolean
+  /** The request failed (network, dev server down). */
+  error?: string
+}
+
+// "http://x/a?b#c" -> "http://x/a?b"; undefined for anything that isn't an http(s) URL.
+export function linkKey(href: string): string | undefined {
+  try {
+    const url = new URL(href)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined
+    url.hash = ''
+    return url.href
+  } catch {
+    return undefined
+  }
+}
+
+// Same-origin page links worth checking, deduped, in document order. Skips other origins,
+// mailto:/tel:/javascript:, and Next's own /_next/ assets.
+export function internalLinks(hrefs: string[], origin: string): string[] {
+  const out = new Set<string>()
+  for (const href of hrefs) {
+    const key = linkKey(href)
+    if (!key) continue
+    const url = new URL(key)
+    if (url.origin === origin && !url.pathname.includes('/_next/')) out.add(key)
+  }
+  return [...out]
+}
+
+export const linkPending = (r: LinkResult) => r.status === undefined && !r.redirect && r.error === undefined
+export const linkBroken = (r: LinkResult) => r.error !== undefined || (r.status !== undefined && r.status >= 400)
+
+// Runs `fn` over `items` with at most `limit` in flight; results keep the input order.
+export async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++
+      out[i] = await fn(items[i], i)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return out
+}

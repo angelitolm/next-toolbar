@@ -58,6 +58,10 @@
       "title": "SEO",
       "description": "The metadata that actually reached the page, and what search engines and link previews trip over."
     },
+    "links": {
+      "title": "Broken links",
+      "description": "Check every internal link of the page on demand, and see the broken ones outlined on the page."
+    },
     "security": {
       "title": "Security",
       "description": "Known vulnerabilities of your Next.js version, from GitHub's security advisories, and what to upgrade to."
@@ -96,6 +100,7 @@
       "errors": "In the 500 scenario, open the errors panel and click Details.",
       "actions": "In \"Account\", hover the lightning: three Server Action calls, one of them failed. Clear empties the list.",
       "seo": "In \"Blog post\", hover the SEO segment: a title that's too long, no description and an og:image that returns 404.",
+      "links": "In \"Blog post\", hover the links segment: two of the page's links are broken.",
       "security": "In \"Outdated Next.js\", hover the red shield: known vulnerabilities of 16.2.6 and the version to upgrade to.",
       "minimize": "Minimize it with the logo or the close button, then click the circle.",
       "theme": "Switch the theme with the button on the right."

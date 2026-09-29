@@ -1,4 +1,4 @@
-import { ArrowRight2, CloseCircle, Danger, FlashCircle, Hashtag, InfoCircle, Monitor, Mouse, PlayCircle, SearchNormal1, ShieldCross, type Icon } from 'iconsax-reactjs'
+import { ArrowRight2, CloseCircle, Danger, FlashCircle, Hashtag, InfoCircle, Link21, Monitor, Mouse, PlayCircle, SearchNormal1, ShieldCross, type Icon } from 'iconsax-reactjs'
 import { hasLocale } from 'next-intl'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
@@ -16,6 +16,7 @@ const TRY: [string, Icon][] = [
   ['errors', Danger],
   ['actions', FlashCircle],
   ['seo', SearchNormal1],
+  ['links', Link21],
   ['security', ShieldCross],
   ['minimize', CloseCircle],
   ['theme', Monitor],

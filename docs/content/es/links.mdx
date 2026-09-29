@@ -1,0 +1,41 @@
+Comprueba todos los enlaces internos de la página actual y te dice cuáles están rotos, con un contorno rojo en la propia página para que los encuentres.
+
+## Qué ves
+
+Un segmento con un enlace. Su contador muestra `–` hasta que lanzas una comprobación, `hechos/total` mientras se ejecuta, y después el número de enlaces rotos (en rojo si hay al menos uno).
+
+Pasa el ratón por encima y haz clic en **Check links**:
+
+- cada enlace interno de la página, con el estado con el que respondió: **2xx** en verde, **4xx/5xx** en rojo, **3xx** para una redirección, `failed` cuando falló la propia petición;
+- al terminar, los rotos primero;
+- en la página, los enlaces rotos llevan un **contorno rojo**. Desaparece con la siguiente comprobación o al navegar.
+
+**Check again** la repite, por ejemplo después de arreglar una ruta.
+
+<Callout type="tip">
+  La [demo en vivo](./demo) muestra una comprobación terminada en el escenario "Post del blog", con dos enlaces rotos.
+</Callout>
+
+## Por qué bajo demanda
+
+`next dev` compila cada ruta la primera vez que se pide. Comprobar todos los enlaces automáticamente, en cada página, compilaría media app en segundo plano y atascaría el servidor de desarrollo mientras trabajas. Por eso la comprobación solo se ejecuta cuando la pides, y manda como mucho **3 peticiones a la vez**.
+
+## Qué cuenta como enlace
+
+Cada `<a href>` del documento (así que también `next/link`) que apunta al **mismo origen** que la página. Se salta:
+
+- otros orígenes (`https://nextjs.org`) y enlaces que no son HTTP (`mailto:`, `tel:`, `javascript:`);
+- los recursos propios de Next bajo `/_next/`;
+- los repetidos: `/blog#intro` y `/blog` se comprueban una vez.
+
+## Cómo se comprueba cada enlace
+
+La barra le hace una petición `HEAD`, o un `GET` si la ruta responde `405` (un route handler que solo exporta `GET`). Es la misma petición que haría el navegador al hacer clic en el enlace, así que las páginas y los route handlers se ejecutan como siempre.
+
+**Las redirecciones no se siguen**: un enlace que responde 3xx aparece como `3xx`, no como roto. Seguirla podría llevar a otro origen, cuyo estado el navegador no deja leer a la página, y aparecería como un `failed` falso.
+
+## Qué no hace
+
+- **Los enlaces externos** no se comprueban: sin CORS el navegador no puede leer su estado.
+- Comprueba **los enlaces que están en la página en ese momento**. Los que se renderizan después (un menú que se abre, scroll infinito) necesitan una nueva comprobación.
+- Un route handler con efectos secundarios en `GET` se ejecuta al comprobarlo, igual que lo haría al hacer clic en su enlace.

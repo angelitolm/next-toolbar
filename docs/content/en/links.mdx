@@ -1,0 +1,41 @@
+Checks every internal link on the current page and tells you which ones are broken, with a red outline on the page itself so you can find them.
+
+## What you see
+
+A link segment. Its count shows `–` until you run a check, `done/total` while it runs, and then the number of broken links (red when there's at least one).
+
+Hover it and click **Check links**:
+
+- every internal link of the page, with the status it answered: **2xx** in green, **4xx/5xx** in red, **3xx** for a redirect, `failed` when the request itself failed;
+- when the check ends, broken links first;
+- on the page, broken links get a **red outline**. It goes away with the next check or when you navigate.
+
+**Check again** re-runs it, for example after fixing a route.
+
+<Callout type="tip">
+  The [live demo](./demo) shows a finished check in the "Blog post" scenario, with two broken links.
+</Callout>
+
+## Why on demand
+
+`next dev` compiles each route the first time it's requested. Checking every link automatically, on every page, would compile half your app in the background and stall the dev server while you work. So the check only runs when you ask, and sends at most **3 requests at a time**.
+
+## What counts as a link
+
+Every `<a href>` in the document (so `next/link` too) that points to the **same origin** as the page. It skips:
+
+- other origins (`https://nextjs.org`) and non-HTTP links (`mailto:`, `tel:`, `javascript:`);
+- Next's own assets under `/_next/`;
+- repeats: `/blog#intro` and `/blog` are checked once.
+
+## How each link is checked
+
+The toolbar sends a `HEAD` request to it, or a `GET` if the route answers `405` (a route handler that only exports `GET`). It's the same request the browser would make when clicking the link, so pages and route handlers run as usual.
+
+**Redirects aren't followed**: a link that answers 3xx shows as `3xx`, not as broken. Following it could lead to another origin, whose status the browser won't let the page read, and it would show up as a false `failed`.
+
+## What it doesn't do
+
+- **External links** aren't checked: the browser can't read their status without CORS.
+- It checks the **links that are on the page right now**. Links rendered later (a menu that opens, infinite scroll) need a new check.
+- A route handler with side effects on `GET` runs when checked, just like clicking its link would run it.

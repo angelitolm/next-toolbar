@@ -19,9 +19,10 @@ The toolbar is a full-width strip floating 16 px above the bottom of the window.
 | 8 | **Errors** | Client errors + server error of this page. Red when > 0 | Server errors (click → profiler) and client errors (expand → stack) |
 | 9 | **Actions** | Lightning and the number of Server Action calls. Red when one failed | Each call: status, time, what it revalidated, redirect; **Refresh page** and **Clear**. See [Server Actions](./server-actions) |
 | 10 | **SEO** | Magnifier and the number of metadata problems: red with errors, amber with warnings only | title, description, canonical, og:image, robots, JSON-LD and each finding. See [SEO](./seo) |
-| 11 | **Next** | Installed Next.js version | React version, request insights on/off, HMR socket connected/disconnected |
-| 12 | **Theme** | Current theme | Click cycles system → light → dark |
-| 13 | **Minimize** | Close icon | Collapses the toolbar to a circle |
+| 11 | **Links** | Link icon: `–` before a check, progress while it runs, then the number of broken links | **Check links**, each link with its status; broken ones outlined on the page. See [Broken links](./links) |
+| 12 | **Next** | Installed Next.js version | React version, request insights on/off, HMR socket connected/disconnected |
+| 13 | **Theme** | Current theme | Click cycles system → light → dark |
+| 14 | **Minimize** | Close icon | Collapses the toolbar to a circle |
 
 Segments added in the latest release wear a **new** badge until you open them once; the toolbar remembers that per browser (`localStorage`, `next-toolbar:seen`).
 

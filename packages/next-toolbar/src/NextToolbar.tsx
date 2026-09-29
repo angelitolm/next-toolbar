@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
-import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Flash, Hashtag, Monitor, Moon, Refresh2, Routing2, SearchNormal1, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
+import { type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight } from './core'
+import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Flash, Hashtag, Link21, Monitor, Moon, Refresh2, Routing2, SearchNormal1, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { VERSION } from './version'
 import { CachePill, CacheSummary, Profiler } from './Profiler'
@@ -22,7 +22,7 @@ const SEEN_KEY = 'next-toolbar:seen'
 
 // Segments added in the current minor: they wear a "new" badge until first opened.
 // ponytail: edit by hand on each release that adds a segment.
-const NEW_SEGMENTS = ['actions', 'seo']
+const NEW_SEGMENTS = ['actions', 'seo', 'links']
 
 export type Theme = 'system' | 'light' | 'dark'
 
@@ -58,15 +58,17 @@ function Toolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securit
   const [security, refreshSecurity] = useSecurity(nextVersion, securityCheck)
   const seo = useSeo(pathname)
   const [actions, setActions] = useServerActions()
+  const [links, checkLinks] = useLinkCheck(pathname)
   const router = useRouter()
 
   return (
     <ToolbarView
       defaultTheme={defaultTheme}
-      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo, actions }}
+      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo, actions, links }}
       onRefreshSecurity={refreshSecurity}
       onRefreshPage={() => router.refresh()}
       onClearActions={() => setActions([])}
+      onCheckLinks={checkLinks}
       onClear={(keepId) => {
         clear(keepId)
         setErrors([])
@@ -97,6 +99,14 @@ export type ToolbarData = {
   seo?: SeoState
   /** Server Actions called since the page loaded, newest first. Omit to hide the segment. */
   actions?: ActionCall[]
+  /** Result of the on-demand link check. Omit to hide the segment. */
+  links?: LinksState
+}
+
+export type LinksState = {
+  status: 'idle' | 'checking' | 'done'
+  /** Every internal link of the page, in document order; filled in as the check runs. */
+  results: LinkResult[]
 }
 
 export type SeoState = {
@@ -121,10 +131,12 @@ type ViewProps = {
   /** router.refresh(): re-renders the current route on the server. */
   onRefreshPage?: () => void
   onClearActions?: () => void
+  /** Starts (or restarts) the link check. Omit to hide the button. */
+  onCheckLinks?: () => void
 }
 
-export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, onRefreshPage, onClearActions }: ViewProps) {
-  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo, actions } = data
+export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, onRefreshPage, onClearActions, onCheckLinks }: ViewProps) {
+  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo, actions, links } = data
   const root = useShadowRoot()
   const [collapsed, setCollapsed] = useState(false)
   const [profiler, setProfiler] = useState<{ open: boolean; id?: string }>({ open: false })
@@ -333,6 +345,7 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
 
       {actions && <ActionsSegment calls={actions} onRefreshPage={onRefreshPage} onClear={onClearActions} isNew={isNew('actions')} onOpen={() => markSeen('actions')} />}
       {seo && <SeoSegment seo={seo} isNew={isNew('seo')} onOpen={() => markSeen('seo')} />}
+      {links && <LinksSegment links={links} onCheck={onCheckLinks} isNew={isNew('links')} onOpen={() => markSeen('links')} />}
 
       {security.status !== 'off' && <SecuritySegment security={security} nextVersion={nextVersion} onRefresh={onRefreshSecurity} />}
 
@@ -944,6 +957,132 @@ Called from ${call.page}`}>
           </span>
         </div>
       ))}
+    </Segment>
+  )
+}
+
+const LINK_CONCURRENCY = 3
+const BROKEN_OUTLINE = '2px solid #ef4444'
+
+// Checks this page's internal links on demand. Not automatic: `next dev` compiles each route
+// on its first request, and firing them all at once would stall the dev server.
+// Broken anchors get an outline on the page until the next check or navigation.
+function useLinkCheck(pathname: string) {
+  const [state, setState] = useState<LinksState>({ status: 'idle', results: [] })
+  const run = useRef<AbortController | null>(null)
+  const marked = useRef<{ el: HTMLAnchorElement; outline: string; offset: string }[]>([])
+
+  const reset = useCallback(() => {
+    run.current?.abort()
+    for (const m of marked.current) {
+      m.el.style.outline = m.outline
+      m.el.style.outlineOffset = m.offset
+    }
+    marked.current = []
+  }, [])
+
+  useEffect(() => reset, [reset])
+  useEffect(() => {
+    reset()
+    setState({ status: 'idle', results: [] })
+  }, [pathname, reset])
+
+  const check = useCallback(async () => {
+    reset()
+    const controller = new AbortController()
+    run.current = controller
+    const anchors = [...document.querySelectorAll<HTMLAnchorElement>('a[href]')]
+    const results: LinkResult[] = internalLinks(
+      anchors.map((a) => a.href),
+      location.origin,
+    ).map((url) => {
+      const u = new URL(url)
+      return { url, path: stripBasePath(u.pathname, BASE_PATH) + u.search }
+    })
+    setState({ status: 'checking', results })
+
+    await mapLimit(results, LINK_CONCURRENCY, async (link, i) => {
+      if (controller.signal.aborted) return
+      const outcome = await checkLink(link.url, controller.signal)
+      if (controller.signal.aborted) return
+      results[i] = { ...link, ...outcome }
+      setState({ status: 'checking', results: [...results] })
+    })
+    if (controller.signal.aborted) return
+    setState({ status: 'done', results: [...results] })
+
+    const broken = new Set(results.filter(linkBroken).map((r) => r.url))
+    for (const a of anchors) {
+      if (!broken.has(linkKey(a.href) ?? '')) continue
+      marked.current.push({ el: a, outline: a.style.outline, offset: a.style.outlineOffset })
+      a.style.outline = BROKEN_OUTLINE
+      a.style.outlineOffset = '2px'
+    }
+  }, [reset])
+
+  return [state, check] as const
+}
+
+// HEAD, or GET when the route only answers GET (a route handler without HEAD).
+// ponytail: redirects aren't followed. A redirect to another origin can't be read without
+// CORS and would show up as a false "failed"; the row says "redirect" instead.
+async function checkLink(url: string, signal: AbortSignal): Promise<Partial<LinkResult>> {
+  try {
+    const get = (method: string) => fetch(url, { method, signal, redirect: 'manual', cache: 'no-store' })
+    let res = await get('HEAD')
+    if (res.status === 405) res = await get('GET')
+    if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) return { redirect: true }
+    return { status: res.status }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+function LinksSegment({ links: { status, results }, onCheck, isNew, onOpen }: { links: LinksState; onCheck?: () => void; isNew?: boolean; onOpen?: () => void }) {
+  const broken = results.filter(linkBroken)
+  const pending = results.filter(linkPending).length
+  const shown = status === 'done' ? [...broken, ...results.filter((r) => !linkBroken(r))] : results
+  const count = status === 'idle' ? '–' : status === 'checking' ? `${results.length - pending}/${results.length}` : broken.length
+
+  return (
+    <Segment
+      className="links"
+      isNew={isNew}
+      onOpen={onOpen}
+      label={<><Link21 className={`ico ${broken.length ? 'ico-err' : ''}`} /><span className="dim hide-md">links</span><span className={`count ${broken.length ? 'err' : ''}`}>{count}</span></>}
+    >
+      <div className="act-head">
+        <div className="sec-head">
+          <b>Internal links</b>
+          <span className="dim">
+            {status === 'done'
+              ? `${results.length} checked · ${broken.length} broken`
+              : `Checks this page's links on demand, ${LINK_CONCURRENCY} at a time.`}
+          </span>
+        </div>
+        {onCheck && (
+          <button className="text-btn" onClick={onCheck} disabled={status === 'checking'}>
+            <Refresh2 size={14} />
+            {status === 'checking' ? 'Checking…' : status === 'done' ? 'Check again' : 'Check links'}
+          </button>
+        )}
+      </div>
+      {status === 'idle' && <div className="hint">Broken links get a red outline on the page.</div>}
+      {status !== 'idle' && results.length === 0 && <div className="hint">No internal links on this page.</div>}
+      {shown.map((r) => (
+        <div key={r.url} className="link-row">
+          {linkPending(r) ? (
+            <span className="pill none">…</span>
+          ) : (
+            <span className={`pill ${linkBroken(r) ? 'err' : r.redirect ? 'none' : 'ok'}`}>{r.error ? 'failed' : r.redirect ? '3xx' : r.status}</span>
+          )}
+          <code title={r.error ?? r.url}>{r.path}</code>
+        </div>
+      ))}
+      <div className="hint">
+        On demand because <code>next dev</code> compiles each route on its first request; checking every link at once would stall it.
+        Redirects aren't followed.
+      </div>
     </Segment>
   )
 }

@@ -58,6 +58,10 @@
       "title": "SEO",
       "description": "Los metadatos que realmente llegaron a la página, y lo que da problemas a buscadores y previsualizaciones de enlaces."
     },
+    "links": {
+      "title": "Enlaces rotos",
+      "description": "Comprueba bajo demanda todos los enlaces internos de la página y ve los rotos marcados en la propia página."
+    },
     "security": {
       "title": "Seguridad",
       "description": "Vulnerabilidades conocidas de tu versión de Next.js, según los avisos de seguridad de GitHub, y a qué versión actualizar."
@@ -96,6 +100,7 @@
       "errors": "En el escenario 500, abre el panel de errores y haz clic en Details.",
       "actions": "En \"Cuenta\", pasa el ratón por el rayo: tres llamadas a Server Actions, una de ellas fallida. Clear vacía la lista.",
       "seo": "En \"Post del blog\", pasa el ratón por el segmento SEO: un título demasiado largo, sin description y un og:image que devuelve 404.",
+      "links": "En \"Post del blog\", pasa el ratón por el segmento de enlaces: dos de los enlaces de la página están rotos.",
       "security": "En \"Next.js desactualizado\", pasa el ratón por el escudo rojo: vulnerabilidades conocidas de la 16.2.6 y la versión a la que actualizar.",
       "minimize": "Minimízala con el logo o el botón de cerrar, y luego haz clic en el círculo.",
       "theme": "Cambia el tema con el botón de la derecha."

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { ActionCall, Advisory, Insight, SeoData } from './core'
+import type { ActionCall, Advisory, Insight, LinkResult, SeoData } from './core'
 import { ToolbarView, type ClientError, type Theme } from './NextToolbar'
 
 export type NextToolbarDemoProps = {
@@ -26,6 +26,8 @@ export type NextToolbarDemoProps = {
   ogImageStatus?: number
   /** Server Actions called from the page, newest first. Omit to hide the segment. */
   actions?: ActionCall[]
+  /** A finished link check of the page. Omit to hide the segment. */
+  links?: LinkResult[]
 }
 
 const NONE: never[] = []
@@ -49,6 +51,7 @@ export function NextToolbarDemo({
   seo,
   ogImageStatus,
   actions,
+  links,
 }: NextToolbarDemoProps) {
   // Clear works like the live toolbar: drop everything but the current page's request, and client errors.
   const [cleared, setCleared] = useState<{ keep?: string } | null>(null)
@@ -79,6 +82,7 @@ export function NextToolbarDemo({
         errorLog: NONE,
         seo: seo && { data: seo, ogImageStatus },
         actions: actions && (actionsCleared ? NONE : actions),
+        links: links && { status: 'done', results: links },
         security: advisories ? { status: 'ok', advisories, checkedAt: Date.now() } : { status: 'off', advisories: NONE },
       }}
       onClear={(keep) => setCleared({ keep })}

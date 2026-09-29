@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { compareVersions, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { compareVersions, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -274,4 +274,51 @@ test('parseActionRedirect and actionFailed', () => {
   assert.equal(actionFailed({ ...call, status: 200 }), false)
   assert.equal(actionFailed({ ...call, status: 500 }), true)
   assert.equal(actionFailed({ ...call, error: 'Failed to fetch' }), true)
+})
+
+test('internalLinks keeps same-origin page links once, without hash, in order', () => {
+  const origin = 'http://localhost:3000'
+  const hrefs = [
+    'http://localhost:3000/blog/a#intro',
+    'http://localhost:3000/about',
+    'http://localhost:3000/blog/a',
+    'http://localhost:3000/search?q=x',
+    'https://example.com/elsewhere',
+    'mailto:hi@example.com',
+    'javascript:void(0)',
+    'http://localhost:3000/_next/static/chunk.js',
+    'http://localhost:3000/docs/_next/image?url=x',
+    'not a url',
+  ]
+  assert.deepEqual(internalLinks(hrefs, origin), [
+    'http://localhost:3000/blog/a',
+    'http://localhost:3000/about',
+    'http://localhost:3000/search?q=x',
+  ])
+  assert.equal(linkKey('http://localhost:3000/a?b=1#c'), 'http://localhost:3000/a?b=1')
+})
+
+test('linkBroken and linkPending', () => {
+  const r = { url: 'u', path: '/u' }
+  assert.equal(linkPending(r), true)
+  assert.equal(linkBroken(r), false)
+  assert.equal(linkBroken({ ...r, status: 200 }), false)
+  assert.equal(linkBroken({ ...r, status: 404 }), true)
+  assert.equal(linkBroken({ ...r, redirect: true }), false)
+  assert.equal(linkPending({ ...r, redirect: true }), false)
+  assert.equal(linkBroken({ ...r, error: 'Failed to fetch' }), true)
+})
+
+test('mapLimit caps concurrency and keeps order', async () => {
+  let active = 0
+  let peak = 0
+  const out = await mapLimit([30, 10, 20, 5, 15], 2, async (ms, i) => {
+    peak = Math.max(peak, ++active)
+    await new Promise((r) => setTimeout(r, ms))
+    active--
+    return i
+  })
+  assert.deepEqual(out, [0, 1, 2, 3, 4])
+  assert.equal(peak, 2)
+  assert.deepEqual(await mapLimit([], 3, async () => 1), [])
 })

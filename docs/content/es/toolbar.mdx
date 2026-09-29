@@ -19,9 +19,10 @@ La barra es una franja de ancho completo que flota 16 px por encima de la parte 
 | 8 | **Errores** | Errores del cliente + error del servidor de esta página. En rojo cuando son > 0 | Errores del servidor (clic → profiler) y errores del cliente (expandir → stack) |
 | 9 | **Actions** | Rayo y el número de llamadas a Server Actions. En rojo cuando alguna falló | Cada llamada: estado, tiempo, qué revalidó, redirección; **Refresh page** y **Clear**. Consulta [Server Actions](./server-actions) |
 | 10 | **SEO** | Lupa y el número de problemas en los metadatos: rojo con errores, ámbar si solo hay avisos | title, description, canonical, og:image, robots, JSON-LD y cada hallazgo. Consulta [SEO](./seo) |
-| 11 | **Next** | Versión de Next.js instalada | Versión de React, request insights activadas/desactivadas, HMR socket conectado/desconectado |
-| 12 | **Tema** | Tema actual | Al hacer clic alterna system → light → dark |
-| 13 | **Minimizar** | Icono de cerrar | Pliega la barra a un círculo |
+| 11 | **Links** | Icono de enlace: `–` antes de comprobar, el progreso mientras se ejecuta y luego el número de enlaces rotos | **Check links**, cada enlace con su estado; los rotos se marcan en la página. Consulta [Enlaces rotos](./links) |
+| 12 | **Next** | Versión de Next.js instalada | Versión de React, request insights activadas/desactivadas, HMR socket conectado/desconectado |
+| 13 | **Tema** | Tema actual | Al hacer clic alterna system → light → dark |
+| 14 | **Minimizar** | Icono de cerrar | Pliega la barra a un círculo |
 
 Los segmentos añadidos en la última versión llevan una etiqueta **new** hasta que los abres una vez; la barra lo recuerda en cada navegador (`localStorage`, `next-toolbar:seen`).
 

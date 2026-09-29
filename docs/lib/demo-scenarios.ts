@@ -1,4 +1,4 @@
-import type { ActionCall, Advisory, ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
+import type { ActionCall, Advisory, LinkResult, ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
 
 // Fixed clock so server and client render the same data.
 const T0 = Date.UTC(2026, 8, 27, 10, 0, 0)
@@ -133,6 +133,19 @@ const BLOG_SEO: NonNullable<NextToolbarDemoProps['seo']> = {
   jsonLd: ['{"@context":"https://schema.org","@type":"BlogPosting","headline":"Hello world"}'],
 }
 
+const link = (path: string, result: Partial<LinkResult>): LinkResult => ({ url: `https://example.com${path}`, path, ...result })
+
+// A finished link check, broken first as the toolbar sorts them.
+const BLOG_LINKS: LinkResult[] = [
+  link('/blog/old-draft', { status: 404 }),
+  link('/tags/nextjs-16', { status: 404 }),
+  link('/', { status: 200 }),
+  link('/blog/second-post', { status: 200 }),
+  link('/docs/install', { status: 200 }),
+  link('/about', { status: 200 }),
+  link('/rss', { redirect: true }),
+]
+
 // Newest first, as the toolbar records them.
 const ACCOUNT_ACTIONS: ActionCall[] = [
   { id: 'c3', actionId: '40f1c9a7e2b84d0c6a5e3f1b9d7c2a8e4f6b0d3c19', page: '/account', startTime: T0 - 20_000, durationMs: 912, status: 500, revalidation: 'none' },
@@ -146,7 +159,7 @@ export const SCENARIOS: { id: ScenarioId; props: NextToolbarDemoProps }[] = [
   { id: 'home', props: { pathname: '/', status: 200, timingMs: 26, isStatic: true, insights: ALL, advisories: [] } },
   {
     id: 'blog',
-    props: { pathname: '/blog/hello-world', params: { slug: 'hello-world' }, status: 200, timingMs: 58, via: 'rsc', isStatic: true, insights: ALL, advisories: [], seo: BLOG_SEO, ogImageStatus: 404 },
+    props: { pathname: '/blog/hello-world', params: { slug: 'hello-world' }, status: 200, timingMs: 58, via: 'rsc', isStatic: true, insights: ALL, advisories: [], seo: BLOG_SEO, ogImageStatus: 404, links: BLOG_LINKS },
   },
   // Next's dev data says static; the no-store fetch makes the toolbar report Dynamic, like `next build`.
   { id: 'dashboard', props: { pathname: '/dashboard', status: 200, timingMs: 251, via: 'rsc', isStatic: true, insights: ALL, advisories: [] } },
