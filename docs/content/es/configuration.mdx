@@ -54,6 +54,16 @@ La barra guarda dos pequeñas preferencias en el `localStorage` del navegador, p
 
 Bórralas para volver a los valores por defecto. Si `localStorage` no está disponible (modo privado, almacenamiento bloqueado), la barra sigue funcionando y simplemente no recuerda nada.
 
+## Otras herramientas en la página
+
+Mientras la barra está desplegada, la barra define `--next-kit-inset-bottom` en `<html>` con el espacio que ocupa en el borde inferior (su alto más su margen, `53px` por defecto). Al minimizarse a un círculo, o al desmontarse, la quita.
+
+Es un contrato que comparten las herramientas `@angelitolm`: el botón y el panel de [next-query](https://next-query.angellm.dev) la suman a su distancia al borde, así que flotan encima de la barra en lugar de taparla. Cualquier widget flotante tuyo puede hacer lo mismo:
+
+```css
+.my-widget { bottom: calc(16px + var(--next-kit-inset-bottom, 0px)); }
+```
+
 ## Ruta de servidor
 
 Opcional. `@angelitolm/next-toolbar/server` exporta dos route handlers; móntalos en `/api/next-toolbar`:

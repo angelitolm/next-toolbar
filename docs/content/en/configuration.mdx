@@ -54,6 +54,16 @@ The toolbar stores two small preferences in the browser's `localStorage`, per or
 
 Clear them to go back to the defaults. If `localStorage` is unavailable (private mode, blocked storage), the toolbar still works and simply doesn't remember.
 
+## Other devtools on the page
+
+While the bar is expanded, the toolbar sets `--next-kit-inset-bottom` on `<html>` to the room it takes at the bottom edge (its height plus its margin, `53px` by default). Minimized to a circle, or unmounted, it removes it.
+
+It's a contract shared by the `@angelitolm` devtools: [next-query](https://next-query.angellm.dev)'s button and panel add it to their bottom offset, so they float above the bar instead of covering it. Any floating widget of your own can do the same:
+
+```css
+.my-widget { bottom: calc(16px + var(--next-kit-inset-bottom, 0px)); }
+```
+
 ## Server route
 
 Optional. `@angelitolm/next-toolbar/server` exports two route handlers; mount them at `/api/next-toolbar`:
