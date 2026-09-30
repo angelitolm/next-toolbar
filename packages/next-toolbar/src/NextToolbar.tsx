@@ -19,6 +19,9 @@ export type Timing = { status?: number; ms: number; via: 'document' | 'rsc' }
 const STORAGE_KEY = 'next-toolbar:collapsed'
 const THEME_KEY = 'next-toolbar:theme'
 const SEEN_KEY = 'next-toolbar:seen'
+// The @angelitolm devtools family contract: whoever docks at the bottom edge publishes the room it
+// takes on <html>, and the floating ones (next-query) add it to their bottom offset.
+const INSET_BOTTOM = '--next-kit-inset-bottom'
 
 // Segments added in the current minor: they wear a "new" badge until first opened.
 // ponytail: edit by hand on each release that adds a segment.
@@ -193,6 +196,22 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
       localStorage.setItem(STORAGE_KEY, value ? '1' : '0')
     } catch {}
   }
+
+  // While the bar is docked, publish its room (bottom margin + height; transforms from the expand
+  // animation don't count). Minimized to a circle in the corner, it takes none.
+  useLayoutEffect(() => {
+    const bar = barRef.current
+    if (!bar) return
+    const style = document.documentElement.style
+    const publish = () => style.setProperty(INSET_BOTTOM, `${bar.offsetHeight + (Number.parseFloat(getComputedStyle(bar).bottom) || 0)}px`)
+    publish()
+    const observer = new ResizeObserver(publish)
+    observer.observe(bar)
+    return () => {
+      observer.disconnect()
+      style.removeProperty(INSET_BOTTOM)
+    }
+  }, [collapsed, root, barRef])
 
   if (!root) return null
 
