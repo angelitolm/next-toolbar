@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { type ActionName, type RevalidateRequest, SERVER_HEADER, SERVER_ROUTE, type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight, type InsightFetch, type CachedFetch, type Freshness, freshness, pageTags, shortDuration } from './core'
+import { type ActionName, type RevalidateRequest, SERVER_HEADER, SERVER_ROUTE, type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight, type InsightFetch, type CachedFetch, type Freshness, freshness, pageTags, shortDuration, cachedFetches } from './core'
 import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Flash, Hashtag, Link21, Monitor, Moon, Refresh2, Routing2, SearchNormal1, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { VERSION } from './version'
@@ -40,17 +40,14 @@ const MAX_INSIGHTS = 100
 // Inlined by Next's bundler (define-env) for every module, packages included.
 const BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH || ''
 
-export function NextToolbar({ theme = 'system', securityCheck = true }: NextToolbarProps = {}) {
-  // Dead code in production builds: the bundler inlines NODE_ENV.
-  if (process.env.NODE_ENV !== 'development') return null
-  return <Toolbar defaultTheme={theme} securityCheck={securityCheck} />
-}
-
-function Toolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securityCheck: boolean }) {
+// The live toolbar. <NextToolbar> (Entry.tsx) loads it lazily: always in `next dev`, on a production build only
+// for a browser the server route lets in (staging access).
+export function LiveToolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securityCheck: boolean }) {
+  const production = process.env.NODE_ENV !== 'development'
   const pathname = usePathname()
   const params = useParams()
   const timings = useTimings()
-  const { manifest, insights, connected, clear } = useHmr()
+  const { manifest, insights, connected, clear } = useHmr(!production)
   const { errors, setErrors, log, setLog } = useClientErrors(pathname)
   const nextVersion = typeof window !== 'undefined' ? window.next?.version : undefined
   const timing = timings[pathname]
@@ -61,11 +58,15 @@ function Toolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securit
   const [links, checkLinks] = useLinkCheck(pathname)
   const router = useRouter()
   const [server, probeServer, revalidate] = useToolbarServer(router.refresh)
+  // Production has no request insights: the fetch list is the data cache, read through the server route.
+  useEffect(() => {
+    if (production) probeServer()
+  }, [production, pathname, probeServer])
 
   return (
     <ToolbarView
       defaultTheme={defaultTheme}
-      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo, actions, links, server }}
+      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo, actions, links, server, production }}
       onRefreshSecurity={refreshSecurity}
       onRefreshPage={() => router.refresh()}
       onClearActions={() => setActions([])}
@@ -106,6 +107,8 @@ export type ToolbarData = {
   links?: LinksState
   /** The app's server route (@angelitolm/next-toolbar/server), if mounted. */
   server?: ServerState
+  /** A production build (staging access): no dev server, so no render mode, request insights or HMR socket. */
+  production?: boolean
 }
 
 export type ServerState = {
@@ -153,7 +156,7 @@ type ViewProps = {
 }
 
 export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, onRefreshPage, onClearActions, onCheckLinks, onProbeServer, onRevalidate }: ViewProps) {
-  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo, actions, links, server } = data
+  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo, actions, links, server, production } = data
   const root = useShadowRoot()
   const [barRef, density] = useBarDensity()
   const [collapsed, setCollapsed] = useState(false)
@@ -249,7 +252,7 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
         {!insight && <div className="hint">Route rebuilt from params (heuristic).</div>}
       </Segment>
 
-      <Segment label={<span className={`badge ${mode}`}>{modeLabel[mode]}</span>}>
+      {!production && <Segment label={<span className={`badge ${mode}`}>{modeLabel[mode]}</span>}>
         <Row k="Render">{modeLabel[mode]}</Row>
         {modeNote && <Row k="Why">{modeNote}</Row>}
         <div className="hint">
@@ -259,7 +262,7 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
           Dev only detects request APIs and <code>force-dynamic</code>; no-store fetches are added from request insights. SSG and ISR
           both show as Static. Run <code>next build</code> for the real output.
         </div>
-      </Segment>
+      </Segment>}
 
       <div className="sep" />
 
@@ -282,7 +285,9 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
         {timing && <Row k={timing.via === 'rsc' ? 'RSC fetch' : 'Time to first byte'}>{ms(timing.ms)}</Row>}
         {!insightsAvailable && (
           <div className="hint">
-            {supportsRequestInsights(nextVersion) ? (
+            {production ? (
+              <>Production build: server timing, fetches and exact routes come from the Next dev server, so they aren't available here.</>
+            ) : supportsRequestInsights(nextVersion) ? (
               <>Enable <code>experimental.requestInsights</code> in next.config for server timing, fetches and exact routes.</>
             ) : (
               <>Server timing, fetches and exact routes need Next.js 16.3+ with <code>experimental.requestInsights</code> (this app runs {nextVersion ?? 'an unknown version'}).</>
@@ -291,9 +296,10 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
         )}
       </Segment>
 
-      {insight && (
+      {(insight || (production && server?.fetchCache)) && (
         <FetchSegment
-          fetches={insight.fetches}
+          fetches={insight ? insight.fetches : cachedFetches(server?.fetchCache ?? {})}
+          fromCache={!insight}
           pathname={pathname}
           server={server}
           onRevalidate={onRevalidate}
@@ -370,7 +376,7 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
         <Row k="Next.js">{nextVersion ?? 'unknown'}</Row>
         <Row k="React">{reactVersion}</Row>
         <Row k="Request insights">{insightsAvailable ? 'on' : 'off'}</Row>
-        <Row k="HMR socket">{connected ? 'connected' : 'disconnected'}</Row>
+        <Row k="HMR socket">{production ? 'none (production build)' : connected ? 'connected' : 'disconnected'}</Row>
       </Segment>
       <button className="icon-btn" onClick={cycleTheme} title={`Theme: ${theme}`} aria-label={`Theme: ${theme}. Switch theme`}>
         {themeIcons[theme]}
@@ -550,7 +556,7 @@ function useTimings() {
 
 // Second socket to Next's dev HMR server: render-mode manifest (Next 15+) and
 // request insights (Next 16.3+ with experimental.requestInsights). Internal API.
-function useHmr() {
+function useHmr(enabled: boolean) {
   const [manifest, setManifest] = useState<Record<string, boolean> | null>(null)
   const [connected, setConnected] = useState(false)
   const insightsRef = useRef(new Map<string, Insight>())
@@ -565,6 +571,7 @@ function useHmr() {
   }, [])
 
   useEffect(() => {
+    if (!enabled) return
     // Like Next's client: current host, path under assetPrefix/basePath (even for a CDN assetPrefix).
     const prefix = assetPrefixFrom([...document.scripts].map((s) => s.src))
     const origin = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}${prefix}`
@@ -609,7 +616,7 @@ function useHmr() {
       clearTimeout(retry)
       ws.close()
     }
-  }, [])
+  }, [enabled])
 
   return { manifest, insights: insightsRef.current, connected, clear }
 }
@@ -1076,6 +1083,7 @@ function FetchSegment({
   onRevalidate,
   isNew,
   onOpen,
+  fromCache,
 }: {
   fetches: InsightFetch[]
   pathname: string
@@ -1083,6 +1091,8 @@ function FetchSegment({
   onRevalidate?: (request: RevalidateRequest) => Promise<string | undefined>
   isNew?: boolean
   onOpen?: () => void
+  /** Production (staging): `fetches` is the whole data cache, not this request's fetches. */
+  fromCache?: boolean
 }) {
   const stats = fetchCacheStats(fetches)
   const cache = server?.fetchCache ?? {}
@@ -1107,14 +1117,20 @@ function FetchSegment({
       label={
         <>
           <ArrangeHorizontal className="ico" />
-          <span className="dim hide-md">fetch</span>
+          <span className="dim hide-md">{fromCache ? 'cached fetches' : 'fetch'}</span>
           <span className="count">{fetches.length}</span>
           {stats.hitRate !== undefined && <span className="dim hide-md">{Math.round(stats.hitRate * 100)}% hit</span>}
         </>
       }
     >
-      {fetches.length === 0 && <div className="hint">No server fetches for this request.</div>}
-      {stats.total > 0 && (
+      {fromCache && (
+        <div className="hint">
+          Production build: no request insights, so this is every fetch in Next's data cache (<code>.next/cache</code>), newest first, not only
+          this page's. No timing or HIT/MISS per request.
+        </div>
+      )}
+      {fetches.length === 0 && <div className="hint">{fromCache ? "Nothing in Next's data cache yet." : 'No server fetches for this request.'}</div>}
+      {!fromCache && stats.total > 0 && (
         <div className="row">
           <span>Cache</span>
           <CacheSummary stats={stats} />
@@ -1125,8 +1141,8 @@ function FetchSegment({
         return (
           <div key={i} className="fetch-row">
             <div>
-              <span className="dim">{f.method ?? 'GET'} {f.statusCode ?? ''}</span>
-              <CachePill f={f} />
+              <span className="dim">{f.method ?? 'GET'} {f.statusCode ?? cached?.status ?? ''}</span>
+              {!fromCache && <CachePill f={f} />}
               <span className="dim">{f.durationMs !== undefined && ms(f.durationMs)}</span>
               {cached && <span className="dim">{freshnessLabel(freshness(cached, now))}</span>}
               {cached && cached.tags.length > 0 && server?.status === 'ready' && (
@@ -1151,6 +1167,19 @@ function FetchSegment({
                   </span>
                 ))}
               </div>
+            )}
+            {cached?.headers && (
+              <details className="fetch-headers">
+                <summary className="dim">response headers ({Object.keys(cached.headers).length})</summary>
+                <dl>
+                  {Object.entries(cached.headers).map(([name, value]) => (
+                    <div key={name}>
+                      <dt>{name}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </details>
             )}
           </div>
         )

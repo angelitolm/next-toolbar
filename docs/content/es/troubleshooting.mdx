@@ -62,9 +62,23 @@ La barra oculta las peticiones que empezaron antes de que borraras, comparando e
 
 Sin request insights el patrón se reconstruye a partir de la URL y de `useParams()`. Un param cuyo valor coincide con un segmento estático (`/blog/blog`) puede etiquetarse mal. Next 16.3+ con request insights da el patrón exacto.
 
+## La barra no aparece en un servidor de staging
+
+Comprueba, en orden:
+
+1. **La ruta de servidor está montada** en `app/api/next-toolbar/route.ts`. Sin ella nadie puede dejar entrar al navegador.
+2. **`NEXT_TOOLBAR_SECRET` está definido en el proceso del servidor** y tiene al menos 16 caracteres. Se lee en tiempo de ejecución, así que reinicia `next start` después de cambiarlo. No debe ser una variable `NEXT_PUBLIC_`.
+3. **La cookie está**: en DevTools → Application → Cookies, una cookie `next-toolbar` de este dominio con `path=/`, con exactamente el mismo valor.
+4. **La ruta responde**: en la consola de DevTools, `fetch('/api/next-toolbar', { headers: { 'x-next-toolbar': '1' } }).then((r) => r.status)`. `404` significa que algo de lo anterior falla (o que un proxy bloquea `/api/next-toolbar`); `200` significa que la barra debería cargarse al recargar.
+5. **`basePath`**: la ruta vive bajo él (`/docs/api/next-toolbar`), y el `path` de la cookie debe cubrirla.
+
+## La lista de fetches en caché sale vacía en staging
+
+La lista se lee de `.next/cache/fetch-cache` en el disco del servidor. Sale vacía en Vercel y otras plataformas serverless, con un `cacheHandler` propio, con un `distDir` propio, o antes de que alguna página haya cacheado un fetch. Los fetches con `no-store` nunca aparecen. Mira [Caché de fetch](./fetch-cache#en-un-servidor-de-staging).
+
 ## ¿Afecta a producción?
 
-No. El componente devuelve `null` a menos que `NODE_ENV` sea `development`: sin render, sin socket, sin listeners.
+No. Fuera de `next dev` el componente devuelve `null`: sin render, sin socket, sin listeners, y las páginas no cargan el código de la barra. La única excepción es un servidor de staging que vuestro equipo active a propósito; mira [Staging](./configuration#staging-qa-self-hosted).
 
 ## ¿Funciona con `basePath`?
 

@@ -106,4 +106,4 @@ It only answers in `next dev`. See [Server Actions](./server-actions#revalidate-
 
 ## Production
 
-Nothing to do. The component checks `process.env.NODE_ENV !== 'development'` and returns `null`, so it renders nothing in production and never opens a connection. Because Next inlines `NODE_ENV` at build time, the minifier can drop the unreachable toolbar code as well. You don't need to import it conditionally.
+Nothing to do. In production the component renders nothing, makes no request and never opens a connection, and the toolbar's code sits in a separate chunk that pages don't load. You don't need to import it conditionally. For QA on a staging server there is a deliberate, opt-in exception: see [Staging](./configuration#staging-self-hosted-qa).

@@ -4,18 +4,30 @@
 //   export { GET, POST } from '@angelitolm/next-toolbar/server'
 //
 // GET: Server Action names and the data cache's fetch entries. POST: revalidatePath / revalidateTag.
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { actionNames, indexFetchCache, parseFetchCacheEntry, parseRevalidate, SERVER_HEADER, type CachedFetch } from './core'
+import { ACCESS_COOKIE, actionNames, cookieValue, indexFetchCache, parseFetchCacheEntry, parseRevalidate, SERVER_HEADER, type CachedFetch } from './core'
 import { VERSION } from './version'
 
 const notFound = () => new Response(null, { status: 404 })
 
-// Only in `next dev`, and only for requests carrying SERVER_HEADER. Browsers won't send a custom
-// header cross-origin without a CORS preflight, which this route never answers, so another site
-// open in your browser can't call it.
-const allowed = (req: Request) => process.env.NODE_ENV === 'development' && req.headers.get(SERVER_HEADER) === '1'
+// Only for requests carrying SERVER_HEADER: browsers won't send a custom header cross-origin without
+// a CORS preflight, which this route never answers, so another site open in your browser can't call it.
+// And only in `next dev`, or on a staging server that set NEXT_TOOLBAR_SECRET (16+ characters) for
+// requests carrying it in the ACCESS_COOKIE cookie.
+const MIN_SECRET_LENGTH = 16
+const digest = (s: string) => createHash('sha256').update(s).digest()
+
+function allowed(req: Request): boolean {
+  if (req.headers.get(SERVER_HEADER) !== '1') return false
+  if (process.env.NODE_ENV === 'development') return true
+  const secret = process.env.NEXT_TOOLBAR_SECRET
+  const sent = cookieValue(req.headers.get('cookie'), ACCESS_COOKIE)
+  // Hashing first gives timingSafeEqual equal lengths.
+  return !!secret && secret.length >= MIN_SECRET_LENGTH && !!sent && timingSafeEqual(digest(sent), digest(secret))
+}
 
 export async function GET(req: Request) {
   if (!allowed(req)) return notFound()
@@ -54,11 +66,12 @@ async function readManifests(): Promise<unknown[]> {
 }
 
 // Next's file-system data cache: one JSON file per cached fetch, with the url, tags and revalidate
-// that request insights leave out. `next dev` writes .next/dev/cache (16.3+) or .next/cache.
+// that request insights leave out. `next dev` writes .next/dev/cache (16.3+) or .next/cache; `next start` .next/cache.
 // ponytail: reads whole files, bodies included; fine for a dev cache, slow if it grows to GBs.
 async function readFetchCache(): Promise<CachedFetch[]> {
   const found: CachedFetch[] = []
-  await walkFiles([join(DIST, 'dev', 'cache', 'fetch-cache'), join(DIST, 'cache', 'fetch-cache')], async (path) => {
+  const dirs = process.env.NODE_ENV === 'development' ? [join(DIST, 'dev', 'cache', 'fetch-cache'), join(DIST, 'cache', 'fetch-cache')] : [join(DIST, 'cache', 'fetch-cache')]
+  await walkFiles(dirs, async (path) => {
     const [text, info] = await Promise.all([readFile(path, 'utf8'), stat(path)])
     const entry = parseFetchCacheEntry(JSON.parse(text), info.mtimeMs)
     if (entry) found.push(entry)

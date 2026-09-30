@@ -67,7 +67,7 @@ export { GET, POST } from '@angelitolm/next-toolbar/server'
 | `GET` | Returns the Server Action names, read from Next's `server-reference-manifest.json` files in `.next`. |
 | `POST` | Runs `revalidatePath` or `revalidateTag` with what the toolbar sends. |
 
-- Both answer **404 outside `next dev`**, so deploying the file is harmless.
+- Both answer **404 outside `next dev`**, so deploying the file is harmless (unless you [opt in on a staging server](#staging-self-hosted-qa)).
 - They also answer 404 unless the request carries the `x-next-toolbar` header. Browsers only send a custom header to another origin after a CORS preflight, which this route never approves, so another site open in your browser can't call it.
 - The path is fixed. If a `middleware`/`proxy` guards `/api`, let `/api/next-toolbar` through in development.
 - It reads the manifests from `.next` in the directory `next dev` runs in: with a custom `distDir`, action names won't be found (revalidating still works).
@@ -82,7 +82,7 @@ Not a toolbar option, but worth repeating: add `app/error.tsx` so a render error
 
 ```tsx title="app/showcase/page.tsx"
 'use client'
-import { NextToolbarDemo } from '@angelitolm/next-toolbar'
+import { NextToolbarDemo } from '@angelitolm/next-toolbar/demo'
 
 export default function Showcase() {
   return <NextToolbarDemo pathname="/blog/hello" params={{ slug: 'hello' }} status={200} timingMs={42} isStatic />
@@ -100,4 +100,64 @@ export default function Showcase() {
 
 ## Production
 
-There is nothing to switch off. The toolbar renders `null` whenever `NODE_ENV` isn't `development`.
+There is nothing to switch off. In a production build the toolbar renders `null`, makes no request and opens no connection. Its code sits in a separate chunk that pages never load for your visitors.
+
+## Staging (self-hosted QA)
+
+NextToolbar is a development tool. **It does not belong in a production environment**, and nothing in the package turns it on there by itself.
+
+A staging server used for specific QA testing is the one exception, and it is **a decision your development team makes on purpose**: the toolbar stays off until someone sets the secret below on that server. Do it only on staging, only for the time QA needs it, and never on the environment your users reach.
+
+<Callout type="warning" title="Never in production">
+  Do not set `NEXT_TOOLBAR_SECRET` in production, not even temporarily to debug. With the server route mounted, whoever holds the secret can list your Server Actions and revalidate your cache.
+</Callout>
+
+To enable it on a self-hosted staging server (`next build` + `next start`):
+
+1. Mount the [server route](#server-route): it is what decides who gets in.
+2. Set a secret of at least 16 characters on the server:
+
+   ```bash
+   NEXT_TOOLBAR_SECRET=a-long-random-string
+   ```
+
+3. In the browser that should see the toolbar, set the same value as the `next-toolbar` cookie (once, from the DevTools console):
+
+   ```js
+   document.cookie = 'next-toolbar=a-long-random-string; path=/; max-age=2592000; samesite=strict'
+   ```
+
+4. Reload the page. The toolbar appears for that browser only.
+
+### What QA sees on staging
+
+A production build has no Next dev server, so everything that comes from it is missing. The rest works as in development.
+
+| Works | Missing, and why |
+|---|---|
+| HTTP status, TTFB and client navigation time | **Render mode** (Static / Dynamic): Next only sends it over the dev server's HMR socket |
+| **Cached fetches**: every fetch in Next's data cache, newest first, with HTTP status, freshness, tags, response headers and revalidate buttons ([details](./fetch-cache#on-a-staging-server)) | **Fetches per request**, their time and HIT / MISS / SKIP: they come from `experimental.requestInsights`, which only `next dev` emits |
+| Server Actions with their names (read from the build's manifests), status, time, revalidation and redirects | **Server render time and the span profiler**: also request insights. The profiler falls back to the page visits the browser recorded |
+| Revalidate by tag or path | **Exact route pattern**: rebuilt from the URL and `useParams()` instead |
+| SEO, broken links, client errors, security check | The **HMR socket** row in the info panel reads `none (production build)` |
+
+### How the access check works
+
+- Without the variable, or with one shorter than 16 characters, production behaves exactly as described in [Production](#production).
+- On every page load, `<NextToolbar>` looks for a `next-toolbar` cookie. Without it, it does nothing: no request, no toolbar code downloaded. Your visitors never pay for the toolbar.
+- With the cookie, it calls the server route once. The server compares the cookie with the secret in constant time and answers 200 or 404. Only on 200 does the browser download the toolbar's chunk.
+- The server route checks the secret on **every** `GET` and `POST`, so the revalidate buttons can't be used without it either. A wrong cookie gets the same 404 as none.
+
+### Turn it off
+
+- For one browser: delete the cookie, `document.cookie = 'next-toolbar=; path=/; max-age=0'`, and reload.
+- For everyone: remove `NEXT_TOOLBAR_SECRET` from the server and restart it. Rotate the value whenever someone who knew it leaves the team.
+- Treat the secret like a password: never put it in a `NEXT_PUBLIC_` variable (that ships it to every browser), a URL or the repository.
+
+### Limits
+
+- **Self-hosted only.** The cached-fetch list reads `.next/cache/fetch-cache` from the server's disk, so it needs one `next start` process with Next's default cache. On Vercel, other serverless platforms or with a custom `cacheHandler` (Redis…), the list is empty or partial; the rest of the toolbar still works.
+- The route reads the manifests and the cache from `.next` in the directory `next start` runs in. With a custom `distDir`, action names and cached fetches won't be found.
+- If a `middleware`/`proxy` guards `/api`, let `/api/next-toolbar` through on staging too.
+
+Not showing up? See [Troubleshooting](./troubleshooting#the-toolbar-doesnt-show-on-a-staging-server).

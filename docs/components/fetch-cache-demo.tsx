@@ -1,5 +1,6 @@
 'use client'
-import { NextToolbarDemo, type CachedFetch, type Insight, type RevalidateRequest } from '@angelitolm/next-toolbar'
+import type { CachedFetch, Insight, RevalidateRequest } from '@angelitolm/next-toolbar'
+import { NextToolbarDemo } from '@angelitolm/next-toolbar/demo'
 import { useLocale } from 'next-intl'
 import { useEffect, useMemo, useState } from 'react'
 

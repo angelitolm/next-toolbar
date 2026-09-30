@@ -30,7 +30,7 @@ NextToolbar puts the answers in one place. While you run `next dev`, it sits at 
 - **Security**: known vulnerabilities of your Next.js version (GitHub advisories) and what to upgrade to
 - Light and dark themes, minimizes to a circle, zero runtime dependencies
 
-Dev only: in production the component renders nothing.
+Dev only: in production the component renders nothing. A self-hosted staging server can opt in for QA with a secret, as a deliberate exception; see [Staging](https://next-toolbar.angellm.dev/en/configuration#staging-self-hosted-qa).
 
 ## Quick start
 

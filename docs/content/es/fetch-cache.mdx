@@ -52,6 +52,7 @@ Con la [ruta de servidor](./server-actions) montada, el panel de fetch muestra p
 
 - **Frescura**: `fresh · stale in 45s`, `stale for 12s`, o `cached, no expiry` para `force-cache`.
 - **Sus tags**, y un botón <kbd>↻</kbd> que ejecuta `revalidateTag(tag, { expire: 0 })` con ellos y refresca la página. Solo se vuelven a pedir los fetches con ese tag; el resto sigue en caché.
+- **Response headers** (plegados), de la respuesta en caché; los valores de `set-cookie` se ocultan. Los headers y el body del propio request no se muestran: la caché de Next no los guarda, solo un hash de ellos como clave de caché.
 - **This page** abajo: `revalidatePath` de la ruta actual, para los fetches sin tags.
 
 Para revalidar un tag que no está en la página actual, escríbelo en el [panel de Server Actions](./server-actions).
@@ -63,6 +64,18 @@ Pruébalo: la lista de abajo hace de página y la barra al pie de la pantalla mu
 <Callout type="note">
   Las request insights no traen los tags, así que la ruta de servidor los lee de la caché de datos de Next en disco (`.next/dev/cache/fetch-cache`) y la barra los cruza con los fetches de la página por URL. Los fetches con `cache: 'no-store'` nunca se guardan y no tienen tags. `'use cache'` con `cacheTag` vive en memoria y no se muestra.
 </Callout>
+
+## En un servidor de staging
+
+En una build de producción con [acceso de staging](./configuration#staging-qa-self-hosted) no hay request insights, así que la barra no puede saber qué fetches hizo esta petición. El segmento pasa a ser **cached fetches**: todas las entradas de la caché de datos de Next (`.next/cache/fetch-cache`), de la más reciente a la más antigua, de toda la app, no solo de la página actual.
+
+Cada fila muestra:
+
+- La URL y el status HTTP de la respuesta en caché (el método no se guarda; Next solo cachea `GET` salvo que se fuerce).
+- **Frescura**: `fresh · stale in 45s`, `stale for 12s`, o `cached, no expiry`.
+- **Tags**, con el botón <kbd>↻</kbd> para revalidarlos, y **Response headers** (plegados, `set-cookie` oculto).
+
+Lo que no puede mostrar: el tiempo, HIT / MISS / SKIP y el motivo de caché, que solo vienen de los request insights. Los fetches con `cache: 'no-store'` nunca se guardan, así que nunca aparecen. La lista se lee al cargar la página y cada vez que abres el segmento; tras revalidar, la entrada nueva aparece cuando una página vuelve a leer ese fetch.
 
 ## Un ejemplo práctico
 

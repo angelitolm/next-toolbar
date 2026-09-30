@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { compareVersions, actionNames, parseRevalidate, parseFetchCacheEntry, indexFetchCache, freshness, pageTags, shortDuration, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { cachedFetches, cookieValue, responseHeaders, compareVersions, actionNames, parseRevalidate, parseFetchCacheEntry, indexFetchCache, freshness, pageTags, shortDuration, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -353,12 +353,38 @@ test('parseFetchCacheEntry keeps user tags, drops implicit route tags, normalize
     tags: ['products'],
     revalidate: 60,
     storedAt: 5,
+    status: 200,
   })
   assert.equal(parseFetchCacheEntry(cacheFile('u', { revalidate: false }), 0)?.revalidate, undefined)
   assert.equal(parseFetchCacheEntry(cacheFile('u', { revalidate: 31_536_000 }), 0)?.revalidate, undefined)
   for (const bad of [null, 'x', { kind: 'PAGE', data: { url: 'u' } }, { kind: 'FETCH', data: {} }, { kind: 'FETCH' }]) {
     assert.equal(parseFetchCacheEntry(bad, 0), undefined, JSON.stringify(bad))
   }
+})
+
+test('parseFetchCacheEntry keeps status and headers, set-cookie redacted, non-strings dropped', () => {
+  const entry = parseFetchCacheEntry(cacheFile('u', { data: { url: 'u', status: 404, headers: { 'x-b': '2', 'Set-Cookie': 'sid=secret', 'x-a': '1', 'x-n': 5 } } }), 0)
+  assert.equal(entry?.status, 404)
+  assert.deepEqual(Object.entries(entry!.headers!), [['Set-Cookie', '[redacted]'], ['x-a', '1'], ['x-b', '2']])
+  assert.equal(responseHeaders({}), undefined)
+  assert.equal(responseHeaders(null), undefined)
+})
+
+test('cachedFetches lists the whole cache newest first, with the cached status', () => {
+  const cache = indexFetchCache([
+    { url: 'a', tags: [], storedAt: 1, status: 200 },
+    { url: 'b', tags: ['t'], storedAt: 3 },
+    { url: 'c', tags: [], storedAt: 2, status: 404 },
+  ])
+  assert.deepEqual(cachedFetches(cache), [{ url: 'b', statusCode: undefined }, { url: 'c', statusCode: 404 }, { url: 'a', statusCode: 200 }])
+  assert.deepEqual(cachedFetches({}), [])
+})
+
+test('cookieValue finds one cookie in a Cookie header', () => {
+  assert.equal(cookieValue('a=1; next-toolbar=s%20x; b=2', 'next-toolbar'), 's x')
+  assert.equal(cookieValue('next-toolbar-old=1', 'next-toolbar'), undefined)
+  assert.equal(cookieValue('x=%E0%A4%A', 'x'), '%E0%A4%A')
+  assert.equal(cookieValue(null, 'x'), undefined)
 })
 
 test('indexFetchCache keeps the newest entry per URL', () => {
