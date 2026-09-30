@@ -756,6 +756,14 @@ export function pageTags(fetches: InsightFetch[], cache: Record<string, CachedFe
   return [...out]
 }
 
+// A production build has no request insights, so its fetch list is the whole data cache: newest first,
+// as fetch rows (the cache doesn't keep the method; it only caches GETs unless forced).
+export function cachedFetches(cache: Record<string, CachedFetch>): InsightFetch[] {
+  return Object.values(cache)
+    .sort((a, b) => b.storedAt - a.storedAt)
+    .map((c) => ({ url: c.url, statusCode: c.status }))
+}
+
 export type RevalidateRequest =
   | { kind: 'path'; path: string; type?: 'page' | 'layout' }
   | { kind: 'tag'; tag: string }

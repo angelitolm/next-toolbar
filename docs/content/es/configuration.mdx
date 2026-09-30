@@ -121,13 +121,43 @@ Para activarla en un servidor de staging propio (`next build` + `next start`):
    NEXT_TOOLBAR_SECRET=una-cadena-larga-y-aleatoria
    ```
 
-3. En el navegador que deba ver la barra, guárdalo en la cookie `next-toolbar` (una vez, desde la consola de DevTools):
+3. En el navegador que deba ver la barra, guarda el mismo valor en la cookie `next-toolbar` (una vez, desde la consola de DevTools):
 
    ```js
    document.cookie = 'next-toolbar=una-cadena-larga-y-aleatoria; path=/; max-age=2592000; samesite=strict'
    ```
 
-- Sin la variable, o con una de menos de 16 caracteres, producción se comporta exactamente como arriba.
-- Solo un navegador con la cookie `next-toolbar` pregunta a la ruta de servidor; el servidor la compara con el secreto en tiempo constante. Una cookie incorrecta recibe el mismo 404 que ninguna.
-- En una build de producción no hay servidor de desarrollo de Next, así que **no hay render mode, ni request insights, ni socket HMR**. Lo que funciona: status HTTP, TTFB y tiempo de navegación, SEO, enlaces rotos, Server Actions (con sus nombres, sacados de los manifests de la build), revalidación, errores de cliente y el chequeo de seguridad.
-- Trata el secreto como una contraseña: nunca uses una variable `NEXT_PUBLIC_` para él, y cámbialo cuando alguien deje el equipo.
+4. Recarga la página. La barra aparece solo en ese navegador.
+
+### Qué ve QA en staging
+
+Una build de producción no tiene servidor de desarrollo de Next, así que falta todo lo que sale de él. El resto funciona igual que en desarrollo.
+
+| Funciona | Falta, y por qué |
+|---|---|
+| Status HTTP, TTFB y tiempo de navegación en cliente | **Render mode** (Static / Dynamic): Next solo lo envía por el socket HMR del servidor de desarrollo |
+| **Fetches en caché**: todos los fetches de la caché de datos de Next, del más reciente al más antiguo, con status HTTP, frescura, tags, headers de respuesta y botones para revalidar ([detalles](./fetch-cache#en-un-servidor-de-staging)) | **Fetches por request**, su tiempo y HIT / MISS / SKIP: vienen de `experimental.requestInsights`, que solo emite `next dev` |
+| Server Actions con sus nombres (leídos de los manifests de la build), status, tiempo, revalidación y redirecciones | **Tiempo de render en servidor y el profiler de spans**: también son request insights. El profiler usa las visitas que registró el navegador |
+| Revalidar por tag o ruta | **Patrón de ruta exacto**: se reconstruye a partir de la URL y `useParams()` |
+| SEO, enlaces rotos, errores de cliente, chequeo de seguridad | La fila **HMR socket** del panel de información dice `none (production build)` |
+
+### Cómo funciona el control de acceso
+
+- Sin la variable, o con una de menos de 16 caracteres, producción se comporta exactamente como se describe en [Producción](#producción).
+- En cada carga de página, `<NextToolbar>` busca una cookie `next-toolbar`. Si no está, no hace nada: ninguna petición, no se descarga código de la barra. Tus visitantes nunca pagan por la barra.
+- Con la cookie, llama una vez a la ruta de servidor. El servidor compara la cookie con el secreto en tiempo constante y responde 200 o 404. Solo con 200 el navegador descarga el chunk de la barra.
+- La ruta de servidor comprueba el secreto en **cada** `GET` y `POST`, así que los botones de revalidar tampoco se pueden usar sin él. Una cookie incorrecta recibe el mismo 404 que ninguna.
+
+### Desactivarla
+
+- En un navegador: borra la cookie, `document.cookie = 'next-toolbar=; path=/; max-age=0'`, y recarga.
+- Para todos: quita `NEXT_TOOLBAR_SECRET` del servidor y reinícialo. Cambia el valor cada vez que alguien que lo conocía deje el equipo.
+- Trata el secreto como una contraseña: nunca lo pongas en una variable `NEXT_PUBLIC_` (eso lo manda a todos los navegadores), en una URL ni en el repositorio.
+
+### Límites
+
+- **Solo self-hosted.** La lista de fetches en caché lee `.next/cache/fetch-cache` del disco del servidor, así que necesita un único proceso `next start` con la caché por defecto de Next. En Vercel, otras plataformas serverless o con un `cacheHandler` propio (Redis…), la lista sale vacía o incompleta; el resto de la barra sigue funcionando.
+- La ruta lee los manifests y la caché de `.next` en el directorio donde se ejecuta `next start`. Con un `distDir` propio no encontrará los nombres de las actions ni los fetches en caché.
+- Si un `middleware`/`proxy` protege `/api`, deja pasar `/api/next-toolbar` también en staging.
+
+¿No aparece? Mira [Solución de problemas](./troubleshooting#la-barra-no-aparece-en-un-servidor-de-staging).

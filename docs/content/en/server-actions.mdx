@@ -57,7 +57,7 @@ Without the route, the panel shows how to add it.
 
 ## Where the data comes from
 
-Server Actions are `POST` requests that carry a `next-action` header with the action id. The toolbar wraps `window.fetch` while it's mounted (only in `next dev`) and records the requests that have that header. The response goes to Next untouched: the toolbar only reads its status and two headers, `x-action-revalidated` and `x-action-redirect`. Both formats are read: a number on Next.js 16, a `[paths, tag, cookie]` tuple on Next.js 15.
+Server Actions are `POST` requests that carry a `next-action` header with the action id. The toolbar wraps `window.fetch` while it's mounted (in `next dev`, or on a [staging server](./configuration#staging-self-hosted-qa)) and records the requests that have that header. The response goes to Next untouched: the toolbar only reads its status and two headers, `x-action-revalidated` and `x-action-redirect`. Both formats are read: a number on Next.js 16, a `[paths, tag, cookie]` tuple on Next.js 15.
 
 ## What it doesn't do
 

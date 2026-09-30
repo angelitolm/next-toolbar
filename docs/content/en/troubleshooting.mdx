@@ -62,6 +62,20 @@ The toolbar hides requests that started before you cleared, comparing the dev se
 
 Without request insights the pattern is rebuilt from the URL and `useParams()`. A param whose value equals a static segment (`/blog/blog`) can be mislabeled. Next 16.3+ with request insights gives the exact pattern.
 
+## The toolbar doesn't show on a staging server
+
+Check, in order:
+
+1. **The server route is mounted** at `app/api/next-toolbar/route.ts`. Without it nobody can let the browser in.
+2. **`NEXT_TOOLBAR_SECRET` is set on the server process** and has at least 16 characters. It's read at runtime, so restart `next start` after changing it. It must not be a `NEXT_PUBLIC_` variable.
+3. **The cookie is there**: in DevTools → Application → Cookies, a `next-toolbar` cookie for this domain with `path=/`, holding exactly the same value.
+4. **The route answers**: in the DevTools console, `fetch('/api/next-toolbar', { headers: { 'x-next-toolbar': '1' } }).then((r) => r.status)`. `404` means one of the above is wrong (or a proxy blocks `/api/next-toolbar`); `200` means the toolbar should load on the next reload.
+5. **`basePath`**: the route lives under it (`/docs/api/next-toolbar`), and the cookie's `path` must cover it.
+
+## The cached fetch list is empty on staging
+
+The list is read from `.next/cache/fetch-cache` on the server's disk. It stays empty on Vercel and other serverless platforms, with a custom `cacheHandler`, with a custom `distDir`, or before any page has cached a fetch. Fetches with `no-store` are never listed. See [Fetch cache](./fetch-cache#on-a-staging-server).
+
 ## Does it affect production?
 
 No. Outside `next dev` the component returns `null`: no rendering, no socket, no listeners, and pages don't load the toolbar's code. The only exception is a staging server your team opts in on purpose; see [Staging](./configuration#staging-self-hosted-qa).

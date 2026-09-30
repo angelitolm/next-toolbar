@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, version as reactVersion, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { type ActionName, type RevalidateRequest, SERVER_HEADER, SERVER_ROUTE, type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight, type InsightFetch, type CachedFetch, type Freshness, freshness, pageTags, shortDuration } from './core'
+import { type ActionName, type RevalidateRequest, SERVER_HEADER, SERVER_ROUTE, type LinkResult, internalLinks, linkBroken, linkKey, linkPending, mapLimit, type ActionCall, actionFailed, parseActionRedirect, parseActionRevalidated, type Advisory, type SeoData, jsonLdSummary, seoIssues, type LoggedError, type Visit, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, alternateHmrPath, assetPrefixFrom, errorOrigins, supportsRequestInsights, fetchCacheStats, refineRenderMode, type RenderMode, hmrPath, insightFor, parseHmr, renderMode, routePattern, stripBasePath, type Insight, type InsightFetch, type CachedFetch, type Freshness, freshness, pageTags, shortDuration, cachedFetches } from './core'
 import { ArrangeHorizontal, ArrowRight, ArrowRight2, CloseCircle, Code, Danger, ExportSquare, Flash, Hashtag, Link21, Monitor, Moon, Refresh2, Routing2, SearchNormal1, ShieldCross, ShieldSearch, ShieldTick, Sun1, Timer1 } from './icons'
 import { Logo } from './Logo'
 import { VERSION } from './version'
@@ -58,6 +58,10 @@ export function LiveToolbar({ defaultTheme, securityCheck }: { defaultTheme: The
   const [links, checkLinks] = useLinkCheck(pathname)
   const router = useRouter()
   const [server, probeServer, revalidate] = useToolbarServer(router.refresh)
+  // Production has no request insights: the fetch list is the data cache, read through the server route.
+  useEffect(() => {
+    if (production) probeServer()
+  }, [production, pathname, probeServer])
 
   return (
     <ToolbarView
@@ -292,9 +296,10 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
         )}
       </Segment>
 
-      {insight && (
+      {(insight || (production && server?.fetchCache)) && (
         <FetchSegment
-          fetches={insight.fetches}
+          fetches={insight ? insight.fetches : cachedFetches(server?.fetchCache ?? {})}
+          fromCache={!insight}
           pathname={pathname}
           server={server}
           onRevalidate={onRevalidate}
@@ -1078,6 +1083,7 @@ function FetchSegment({
   onRevalidate,
   isNew,
   onOpen,
+  fromCache,
 }: {
   fetches: InsightFetch[]
   pathname: string
@@ -1085,6 +1091,8 @@ function FetchSegment({
   onRevalidate?: (request: RevalidateRequest) => Promise<string | undefined>
   isNew?: boolean
   onOpen?: () => void
+  /** Production (staging): `fetches` is the whole data cache, not this request's fetches. */
+  fromCache?: boolean
 }) {
   const stats = fetchCacheStats(fetches)
   const cache = server?.fetchCache ?? {}
@@ -1109,14 +1117,20 @@ function FetchSegment({
       label={
         <>
           <ArrangeHorizontal className="ico" />
-          <span className="dim hide-md">fetch</span>
+          <span className="dim hide-md">{fromCache ? 'cached fetches' : 'fetch'}</span>
           <span className="count">{fetches.length}</span>
           {stats.hitRate !== undefined && <span className="dim hide-md">{Math.round(stats.hitRate * 100)}% hit</span>}
         </>
       }
     >
-      {fetches.length === 0 && <div className="hint">No server fetches for this request.</div>}
-      {stats.total > 0 && (
+      {fromCache && (
+        <div className="hint">
+          Production build: no request insights, so this is every fetch in Next's data cache (<code>.next/cache</code>), newest first, not only
+          this page's. No timing or HIT/MISS per request.
+        </div>
+      )}
+      {fetches.length === 0 && <div className="hint">{fromCache ? "Nothing in Next's data cache yet." : 'No server fetches for this request.'}</div>}
+      {!fromCache && stats.total > 0 && (
         <div className="row">
           <span>Cache</span>
           <CacheSummary stats={stats} />
@@ -1128,7 +1142,7 @@ function FetchSegment({
           <div key={i} className="fetch-row">
             <div>
               <span className="dim">{f.method ?? 'GET'} {f.statusCode ?? cached?.status ?? ''}</span>
-              <CachePill f={f} />
+              {!fromCache && <CachePill f={f} />}
               <span className="dim">{f.durationMs !== undefined && ms(f.durationMs)}</span>
               {cached && <span className="dim">{freshnessLabel(freshness(cached, now))}</span>}
               {cached && cached.tags.length > 0 && server?.status === 'ready' && (

@@ -121,13 +121,43 @@ To enable it on a self-hosted staging server (`next build` + `next start`):
    NEXT_TOOLBAR_SECRET=a-long-random-string
    ```
 
-3. In the browser that should see the toolbar, set it as the `next-toolbar` cookie (once, from the DevTools console):
+3. In the browser that should see the toolbar, set the same value as the `next-toolbar` cookie (once, from the DevTools console):
 
    ```js
    document.cookie = 'next-toolbar=a-long-random-string; path=/; max-age=2592000; samesite=strict'
    ```
 
-- Without the variable, or with one shorter than 16 characters, production behaves exactly as above.
-- Only a browser holding the `next-toolbar` cookie asks the server route; the server compares it with the secret in constant time. A wrong cookie gets the same 404 as none.
-- There is no Next dev server in a production build, so there is **no render mode, no request insights and no HMR socket**. What works: HTTP status, TTFB and navigation time, SEO, broken links, Server Actions (with their names, from the build's manifests), revalidation, client errors and the security check.
-- Treat the secret like a password: never use a `NEXT_PUBLIC_` variable for it, and rotate it when someone leaves the team.
+4. Reload the page. The toolbar appears for that browser only.
+
+### What QA sees on staging
+
+A production build has no Next dev server, so everything that comes from it is missing. The rest works as in development.
+
+| Works | Missing, and why |
+|---|---|
+| HTTP status, TTFB and client navigation time | **Render mode** (Static / Dynamic): Next only sends it over the dev server's HMR socket |
+| **Cached fetches**: every fetch in Next's data cache, newest first, with HTTP status, freshness, tags, response headers and revalidate buttons ([details](./fetch-cache#on-a-staging-server)) | **Fetches per request**, their time and HIT / MISS / SKIP: they come from `experimental.requestInsights`, which only `next dev` emits |
+| Server Actions with their names (read from the build's manifests), status, time, revalidation and redirects | **Server render time and the span profiler**: also request insights. The profiler falls back to the page visits the browser recorded |
+| Revalidate by tag or path | **Exact route pattern**: rebuilt from the URL and `useParams()` instead |
+| SEO, broken links, client errors, security check | The **HMR socket** row in the info panel reads `none (production build)` |
+
+### How the access check works
+
+- Without the variable, or with one shorter than 16 characters, production behaves exactly as described in [Production](#production).
+- On every page load, `<NextToolbar>` looks for a `next-toolbar` cookie. Without it, it does nothing: no request, no toolbar code downloaded. Your visitors never pay for the toolbar.
+- With the cookie, it calls the server route once. The server compares the cookie with the secret in constant time and answers 200 or 404. Only on 200 does the browser download the toolbar's chunk.
+- The server route checks the secret on **every** `GET` and `POST`, so the revalidate buttons can't be used without it either. A wrong cookie gets the same 404 as none.
+
+### Turn it off
+
+- For one browser: delete the cookie, `document.cookie = 'next-toolbar=; path=/; max-age=0'`, and reload.
+- For everyone: remove `NEXT_TOOLBAR_SECRET` from the server and restart it. Rotate the value whenever someone who knew it leaves the team.
+- Treat the secret like a password: never put it in a `NEXT_PUBLIC_` variable (that ships it to every browser), a URL or the repository.
+
+### Limits
+
+- **Self-hosted only.** The cached-fetch list reads `.next/cache/fetch-cache` from the server's disk, so it needs one `next start` process with Next's default cache. On Vercel, other serverless platforms or with a custom `cacheHandler` (Redis…), the list is empty or partial; the rest of the toolbar still works.
+- The route reads the manifests and the cache from `.next` in the directory `next start` runs in. With a custom `distDir`, action names and cached fetches won't be found.
+- If a `middleware`/`proxy` guards `/api`, let `/api/next-toolbar` through on staging too.
+
+Not showing up? See [Troubleshooting](./troubleshooting#the-toolbar-doesnt-show-on-a-staging-server).

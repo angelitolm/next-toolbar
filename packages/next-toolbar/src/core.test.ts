@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cookieValue, responseHeaders, compareVersions, actionNames, parseRevalidate, parseFetchCacheEntry, indexFetchCache, freshness, pageTags, shortDuration, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
+import { cachedFetches, cookieValue, responseHeaders, compareVersions, actionNames, parseRevalidate, parseFetchCacheEntry, indexFetchCache, freshness, pageTags, shortDuration, internalLinks, linkKey, linkBroken, linkPending, mapLimit, parseActionRevalidated, parseActionRedirect, actionFailed, jsonLdSummary, seoIssues, inRange, patchedFor, fromGlobalAdvisories, fromRepoAdvisories, mergeAdvisories, upgradeTarget, errorsDuring, alternateHmrPath, supportsRequestInsights, errorOrigins, refineRenderMode, assetPrefixFrom, fetchCacheStats, hmrPath, stripBasePath, insightFor, insightHttpStatus, parseHmr, renderMode, routePattern, spanRows, type Insight } from './core.ts'
 
 // Shape captured from Next 16.3.6: children-first, root GET carries the status.
 const traced: Insight = {
@@ -368,6 +368,16 @@ test('parseFetchCacheEntry keeps status and headers, set-cookie redacted, non-st
   assert.deepEqual(Object.entries(entry!.headers!), [['Set-Cookie', '[redacted]'], ['x-a', '1'], ['x-b', '2']])
   assert.equal(responseHeaders({}), undefined)
   assert.equal(responseHeaders(null), undefined)
+})
+
+test('cachedFetches lists the whole cache newest first, with the cached status', () => {
+  const cache = indexFetchCache([
+    { url: 'a', tags: [], storedAt: 1, status: 200 },
+    { url: 'b', tags: ['t'], storedAt: 3 },
+    { url: 'c', tags: [], storedAt: 2, status: 404 },
+  ])
+  assert.deepEqual(cachedFetches(cache), [{ url: 'b', statusCode: undefined }, { url: 'c', statusCode: 404 }, { url: 'a', statusCode: 200 }])
+  assert.deepEqual(cachedFetches({}), [])
 })
 
 test('cookieValue finds one cookie in a Cookie header', () => {

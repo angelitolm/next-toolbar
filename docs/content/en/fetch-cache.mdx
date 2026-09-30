@@ -65,6 +65,18 @@ Try it: the list below plays the page, the toolbar at the bottom of the screen s
   Request insights don't carry tags, so the server route reads them from Next's data cache on disk (`.next/dev/cache/fetch-cache`) and the toolbar matches them to the page's fetches by URL. Fetches with `cache: 'no-store'` are never stored and have no tags. `'use cache'` with `cacheTag` lives in memory and isn't shown.
 </Callout>
 
+## On a staging server
+
+On a production build with [staging access](./configuration#staging-self-hosted-qa), there are no request insights, so the toolbar can't know which fetches this request made. The segment turns into **cached fetches**: every entry in Next's data cache (`.next/cache/fetch-cache`), newest first, for the whole app, not only the current page.
+
+Each row shows:
+
+- The URL and the cached response's HTTP status (the method isn't cached; Next only caches `GET` unless forced).
+- **Freshness**: `fresh · stale in 45s`, `stale for 12s`, or `cached, no expiry`.
+- **Tags**, with the <kbd>↻</kbd> button to revalidate them, and **Response headers** (collapsed, `set-cookie` hidden).
+
+What it can't show: time, HIT / MISS / SKIP and the cache reason, which only come from request insights. Fetches with `cache: 'no-store'` are never stored, so they never appear. The list is read when the page loads and every time you open the segment; after revalidating, the new entry shows up once a page reads that fetch again.
+
 ## A worked example
 
 The playground has a `/cache` page with three fetches to a local API:
