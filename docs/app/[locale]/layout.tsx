@@ -59,9 +59,9 @@ export default async function LocaleLayout({ children, params }: Props) {
                 <div className="ml-auto flex items-center gap-2">
                   <Link
                     href="/demo"
-                    className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground md:flex"
+                    className="hidden items-center gap-1.5 rounded-xl bg-linear-to-r from-[#d4f55c] to-[#7eecd9] px-3.5 py-1.5 text-sm font-semibold text-neutral-900 shadow-sm transition hover:brightness-105 md:flex"
                   >
-                    <PlayCircle variant="Broken" className="size-4 text-brand-text" aria-hidden="true" />
+                    <PlayCircle variant="Broken" className="size-4" aria-hidden="true" />
                     {t('ui.demo')}
                   </Link>
                   <LocaleSwitch label={t('ui.language')} />
