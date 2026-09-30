@@ -106,4 +106,4 @@ Solo responde en `next dev`. Consulta [Server Actions](./server-actions#revalida
 
 ## Producción
 
-No tienes que hacer nada. El componente comprueba `process.env.NODE_ENV !== 'development'` y devuelve `null`, así que no renderiza nada en producción y nunca abre una conexión. Como Next incrusta `NODE_ENV` en tiempo de build, el minificador también puede eliminar el código inalcanzable de la barra. No necesitas importarla de forma condicional.
+No tienes que hacer nada. En producción el componente no renderiza nada, no hace peticiones y nunca abre una conexión, y el código de la barra va en un chunk aparte que las páginas no cargan. No necesitas importarla de forma condicional. Para QA en un servidor de staging hay una excepción deliberada y opcional: mira [Staging](./configuration#staging-qa-self-hosted).

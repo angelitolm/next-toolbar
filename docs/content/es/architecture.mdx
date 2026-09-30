@@ -47,7 +47,7 @@ Con `experimental.requestInsights`, Next 16.3 registra cada petición como spans
 
 ## Render
 
-- `<NextToolbar>` devuelve `null` a menos que `NODE_ENV` sea `development`.
+- `<NextToolbar>` devuelve `null` a menos que `NODE_ENV` sea `development` (o la ruta de servidor admita un navegador de [staging](./configuration#staging-qa-self-hosted)). La barra en sí es un chunk lazy, que solo se carga cuando se va a renderizar.
 - Crea un elemento `<next-toolbar>` al final de `<body>`, le adjunta un **Shadow DOM abierto** y renderiza dentro con un portal de React. La hoja de estilos vive dentro del shadow root, así que el CSS de ninguno de los dos lados se filtra al otro.
 - El tema es un atributo `data-theme` en el elemento host; sin atributo significa "seguir el sistema operativo".
 

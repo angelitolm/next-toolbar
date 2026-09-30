@@ -47,7 +47,7 @@ With `experimental.requestInsights`, Next 16.3 records each request as OpenTelem
 
 ## Rendering
 
-- `<NextToolbar>` returns `null` unless `NODE_ENV` is `development`.
+- `<NextToolbar>` returns `null` unless `NODE_ENV` is `development` (or the server route admits a [staging](./configuration#staging-self-hosted-qa) browser). The toolbar itself is a lazy chunk, loaded only when it will render.
 - It creates a `<next-toolbar>` element at the end of `<body>`, attaches an **open Shadow DOM** and renders into it with a React portal. The stylesheet lives inside the shadow root, so neither side's CSS leaks into the other.
 - The theme is a `data-theme` attribute on the host element; no attribute means "follow the OS".
 

@@ -52,6 +52,7 @@ With the [server route](./server-actions) mounted, the fetch panel shows for eac
 
 - **Freshness**: `fresh · stale in 45s`, `stale for 12s`, or `cached, no expiry` for `force-cache`.
 - **Its tags**, and a <kbd>↻</kbd> button that runs `revalidateTag(tag, { expire: 0 })` for them and refreshes the page. Only fetches carrying the tag are fetched again; everything else stays cached.
+- **Response headers** (collapsed), from the cached response; `set-cookie` values are hidden. The request's own headers and body aren't shown: Next's cache doesn't keep them, only a hash of them as the cache key.
 - **This page** at the bottom: `revalidatePath` for the current path, for fetches without tags.
 
 To revalidate a tag that isn't on the current page, type it in the [Server Actions panel](./server-actions).

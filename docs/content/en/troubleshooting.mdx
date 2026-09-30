@@ -64,7 +64,7 @@ Without request insights the pattern is rebuilt from the URL and `useParams()`. 
 
 ## Does it affect production?
 
-No. The component returns `null` unless `NODE_ENV` is `development`: no rendering, no socket, no listeners.
+No. Outside `next dev` the component returns `null`: no rendering, no socket, no listeners, and pages don't load the toolbar's code. The only exception is a staging server your team opts in on purpose; see [Staging](./configuration#staging-self-hosted-qa).
 
 ## Does it work with `basePath`?
 

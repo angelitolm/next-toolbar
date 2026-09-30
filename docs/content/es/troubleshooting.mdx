@@ -64,7 +64,7 @@ Sin request insights el patrón se reconstruye a partir de la URL y de `useParam
 
 ## ¿Afecta a producción?
 
-No. El componente devuelve `null` a menos que `NODE_ENV` sea `development`: sin render, sin socket, sin listeners.
+No. Fuera de `next dev` el componente devuelve `null`: sin render, sin socket, sin listeners, y las páginas no cargan el código de la barra. La única excepción es un servidor de staging que vuestro equipo active a propósito; mira [Staging](./configuration#staging-qa-self-hosted).
 
 ## ¿Funciona con `basePath`?
 

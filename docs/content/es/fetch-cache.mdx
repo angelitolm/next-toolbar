@@ -52,6 +52,7 @@ Con la [ruta de servidor](./server-actions) montada, el panel de fetch muestra p
 
 - **Frescura**: `fresh · stale in 45s`, `stale for 12s`, o `cached, no expiry` para `force-cache`.
 - **Sus tags**, y un botón <kbd>↻</kbd> que ejecuta `revalidateTag(tag, { expire: 0 })` con ellos y refresca la página. Solo se vuelven a pedir los fetches con ese tag; el resto sigue en caché.
+- **Response headers** (plegados), de la respuesta en caché; los valores de `set-cookie` se ocultan. Los headers y el body del propio request no se muestran: la caché de Next no los guarda, solo un hash de ellos como clave de caché.
 - **This page** abajo: `revalidatePath` de la ruta actual, para los fetches sin tags.
 
 Para revalidar un tag que no está en la página actual, escríbelo en el [panel de Server Actions](./server-actions).
