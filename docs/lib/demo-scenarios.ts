@@ -1,4 +1,5 @@
-import type { ActionCall, ActionName, Advisory, CachedFetch, LinkResult, ClientError, Insight, InsightFetch, InsightSpan, NextToolbarDemoProps } from '@angelitolm/next-toolbar'
+import type { ActionCall, ActionName, Advisory, CachedFetch, LinkResult, ClientError, Insight, InsightFetch, InsightSpan } from '@angelitolm/next-toolbar'
+import type { NextToolbarDemoProps } from '@angelitolm/next-toolbar/demo'
 
 // Fixed clock so server and client render the same data.
 const T0 = Date.UTC(2026, 8, 27, 10, 0, 0)

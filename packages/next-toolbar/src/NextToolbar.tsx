@@ -40,17 +40,14 @@ const MAX_INSIGHTS = 100
 // Inlined by Next's bundler (define-env) for every module, packages included.
 const BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH || ''
 
-export function NextToolbar({ theme = 'system', securityCheck = true }: NextToolbarProps = {}) {
-  // Dead code in production builds: the bundler inlines NODE_ENV.
-  if (process.env.NODE_ENV !== 'development') return null
-  return <Toolbar defaultTheme={theme} securityCheck={securityCheck} />
-}
-
-function Toolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securityCheck: boolean }) {
+// The live toolbar. <NextToolbar> (Entry.tsx) loads it lazily: always in `next dev`, on a production build only
+// for a browser the server route lets in (staging access).
+export function LiveToolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securityCheck: boolean }) {
+  const production = process.env.NODE_ENV !== 'development'
   const pathname = usePathname()
   const params = useParams()
   const timings = useTimings()
-  const { manifest, insights, connected, clear } = useHmr()
+  const { manifest, insights, connected, clear } = useHmr(!production)
   const { errors, setErrors, log, setLog } = useClientErrors(pathname)
   const nextVersion = typeof window !== 'undefined' ? window.next?.version : undefined
   const timing = timings[pathname]
@@ -65,7 +62,7 @@ function Toolbar({ defaultTheme, securityCheck }: { defaultTheme: Theme; securit
   return (
     <ToolbarView
       defaultTheme={defaultTheme}
-      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo, actions, links, server }}
+      data={{ pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath: BASE_PATH, visits, errorLog: log, security, seo, actions, links, server, production }}
       onRefreshSecurity={refreshSecurity}
       onRefreshPage={() => router.refresh()}
       onClearActions={() => setActions([])}
@@ -106,6 +103,8 @@ export type ToolbarData = {
   links?: LinksState
   /** The app's server route (@angelitolm/next-toolbar/server), if mounted. */
   server?: ServerState
+  /** A production build (staging access): no dev server, so no render mode, request insights or HMR socket. */
+  production?: boolean
 }
 
 export type ServerState = {
@@ -153,7 +152,7 @@ type ViewProps = {
 }
 
 export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, onRefreshPage, onClearActions, onCheckLinks, onProbeServer, onRevalidate }: ViewProps) {
-  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo, actions, links, server } = data
+  const { pathname, params, timing, manifest, insights, connected, errors, nextVersion, basePath, visits, errorLog, security, seo, actions, links, server, production } = data
   const root = useShadowRoot()
   const [barRef, density] = useBarDensity()
   const [collapsed, setCollapsed] = useState(false)
@@ -249,7 +248,7 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
         {!insight && <div className="hint">Route rebuilt from params (heuristic).</div>}
       </Segment>
 
-      <Segment label={<span className={`badge ${mode}`}>{modeLabel[mode]}</span>}>
+      {!production && <Segment label={<span className={`badge ${mode}`}>{modeLabel[mode]}</span>}>
         <Row k="Render">{modeLabel[mode]}</Row>
         {modeNote && <Row k="Why">{modeNote}</Row>}
         <div className="hint">
@@ -259,7 +258,7 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
           Dev only detects request APIs and <code>force-dynamic</code>; no-store fetches are added from request insights. SSG and ISR
           both show as Static. Run <code>next build</code> for the real output.
         </div>
-      </Segment>
+      </Segment>}
 
       <div className="sep" />
 
@@ -282,7 +281,9 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
         {timing && <Row k={timing.via === 'rsc' ? 'RSC fetch' : 'Time to first byte'}>{ms(timing.ms)}</Row>}
         {!insightsAvailable && (
           <div className="hint">
-            {supportsRequestInsights(nextVersion) ? (
+            {production ? (
+              <>Production build: server timing, fetches and exact routes come from the Next dev server, so they aren't available here.</>
+            ) : supportsRequestInsights(nextVersion) ? (
               <>Enable <code>experimental.requestInsights</code> in next.config for server timing, fetches and exact routes.</>
             ) : (
               <>Server timing, fetches and exact routes need Next.js 16.3+ with <code>experimental.requestInsights</code> (this app runs {nextVersion ?? 'an unknown version'}).</>
@@ -370,7 +371,7 @@ export function ToolbarView({ data, defaultTheme, onClear, onRefreshSecurity, on
         <Row k="Next.js">{nextVersion ?? 'unknown'}</Row>
         <Row k="React">{reactVersion}</Row>
         <Row k="Request insights">{insightsAvailable ? 'on' : 'off'}</Row>
-        <Row k="HMR socket">{connected ? 'connected' : 'disconnected'}</Row>
+        <Row k="HMR socket">{production ? 'none (production build)' : connected ? 'connected' : 'disconnected'}</Row>
       </Segment>
       <button className="icon-btn" onClick={cycleTheme} title={`Theme: ${theme}`} aria-label={`Theme: ${theme}. Switch theme`}>
         {themeIcons[theme]}
@@ -550,7 +551,7 @@ function useTimings() {
 
 // Second socket to Next's dev HMR server: render-mode manifest (Next 15+) and
 // request insights (Next 16.3+ with experimental.requestInsights). Internal API.
-function useHmr() {
+function useHmr(enabled: boolean) {
   const [manifest, setManifest] = useState<Record<string, boolean> | null>(null)
   const [connected, setConnected] = useState(false)
   const insightsRef = useRef(new Map<string, Insight>())
@@ -565,6 +566,7 @@ function useHmr() {
   }, [])
 
   useEffect(() => {
+    if (!enabled) return
     // Like Next's client: current host, path under assetPrefix/basePath (even for a CDN assetPrefix).
     const prefix = assetPrefixFrom([...document.scripts].map((s) => s.src))
     const origin = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}${prefix}`
@@ -609,7 +611,7 @@ function useHmr() {
       clearTimeout(retry)
       ws.close()
     }
-  }, [])
+  }, [enabled])
 
   return { manifest, insights: insightsRef.current, connected, clear }
 }
@@ -1125,7 +1127,7 @@ function FetchSegment({
         return (
           <div key={i} className="fetch-row">
             <div>
-              <span className="dim">{f.method ?? 'GET'} {f.statusCode ?? ''}</span>
+              <span className="dim">{f.method ?? 'GET'} {f.statusCode ?? cached?.status ?? ''}</span>
               <CachePill f={f} />
               <span className="dim">{f.durationMs !== undefined && ms(f.durationMs)}</span>
               {cached && <span className="dim">{freshnessLabel(freshness(cached, now))}</span>}
@@ -1151,6 +1153,19 @@ function FetchSegment({
                   </span>
                 ))}
               </div>
+            )}
+            {cached?.headers && (
+              <details className="fetch-headers">
+                <summary className="dim">response headers ({Object.keys(cached.headers).length})</summary>
+                <dl>
+                  {Object.entries(cached.headers).map(([name, value]) => (
+                    <div key={name}>
+                      <dt>{name}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </details>
             )}
           </div>
         )

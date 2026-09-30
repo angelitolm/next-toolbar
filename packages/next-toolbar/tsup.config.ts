@@ -13,7 +13,9 @@ const shared = {
 export default defineConfig([
   {
     ...shared,
-    entry: ['src/index.ts'],
+    // The demo is its own entry: from the root it would statically import the toolbar, and the root's
+    // lazy import of it would land in every production bundle.
+    entry: ['src/index.ts', 'src/Demo.tsx'],
     clean: true,
     // Directive must survive bundling so the App Router treats this as a client component.
     banner: { js: "'use client';" },

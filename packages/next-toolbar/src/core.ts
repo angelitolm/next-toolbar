@@ -642,6 +642,24 @@ export async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (it
 export const SERVER_ROUTE = '/api/next-toolbar'
 /** Sent on every toolbar request to the server route; see server.ts for why. */
 export const SERVER_HEADER = 'x-next-toolbar'
+/** Cookie that carries NEXT_TOOLBAR_SECRET to a production server (staging access). */
+export const ACCESS_COOKIE = 'next-toolbar'
+
+// One cookie's value from a Cookie header, or undefined.
+export function cookieValue(header: string | null | undefined, name: string): string | undefined {
+  for (const part of (header ?? '').split(';')) {
+    const eq = part.indexOf('=')
+    if (eq > 0 && part.slice(0, eq).trim() === name) {
+      const raw = part.slice(eq + 1).trim()
+      try {
+        return decodeURIComponent(raw)
+      } catch {
+        return raw
+      }
+    }
+  }
+  return undefined
+}
 
 export type ActionName = { name: string; file?: string }
 
@@ -677,6 +695,9 @@ export type CachedFetch = {
   revalidate?: number
   /** When the entry was written: the file's mtime, which is what Next compares against. */
   storedAt: number
+  /** The cached response's HTTP status and headers (set-cookie redacted). The request itself isn't cached, only a hash of it. */
+  status?: number
+  headers?: Record<string, string>
 }
 
 // Next writes `revalidate: false` or a one-year CACHE_ONE_YEAR for force-cache.
@@ -684,11 +705,26 @@ const NEVER_EXPIRES = 31_536_000
 
 // One .next/(dev/)cache/fetch-cache/<key> file. Undefined for anything that isn't a fetch entry.
 export function parseFetchCacheEntry(json: unknown, mtimeMs: number): CachedFetch | undefined {
-  const entry = json as { kind?: unknown; data?: { url?: unknown }; tags?: unknown; revalidate?: unknown } | null
+  const entry = json as { kind?: unknown; data?: { url?: unknown; status?: unknown; headers?: unknown }; tags?: unknown; revalidate?: unknown } | null
   if (entry?.kind !== 'FETCH' || typeof entry.data?.url !== 'string') return undefined
   const tags = Array.isArray(entry.tags) ? entry.tags.filter((t): t is string => typeof t === 'string' && !t.startsWith('_N_T_')) : []
   const revalidate = typeof entry.revalidate === 'number' && entry.revalidate > 0 && entry.revalidate < NEVER_EXPIRES ? entry.revalidate : undefined
-  return { url: entry.data.url, tags, revalidate, storedAt: mtimeMs }
+  const out: CachedFetch = { url: entry.data.url, tags, revalidate, storedAt: mtimeMs }
+  if (typeof entry.data.status === 'number') out.status = entry.data.status
+  const headers = responseHeaders(entry.data.headers)
+  if (headers) out.headers = headers
+  return out
+}
+
+// set-cookie can carry a session, so its value is hidden. Sorted by name.
+export function responseHeaders(raw: unknown): Record<string, string> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const out: Record<string, string> = {}
+  for (const [name, value] of Object.entries(raw).sort(([a], [b]) => a.localeCompare(b))) {
+    if (typeof value !== 'string') continue
+    out[name] = name.toLowerCase() === 'set-cookie' ? '[redacted]' : value
+  }
+  return Object.keys(out).length ? out : undefined
 }
 
 // url -> newest entry. The same URL can have several entries (different headers or bodies);

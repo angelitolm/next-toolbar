@@ -1,5 +1,6 @@
 'use client'
-import { NextToolbarDemo, type ActionCall } from '@angelitolm/next-toolbar'
+import type { ActionCall } from '@angelitolm/next-toolbar'
+import { NextToolbarDemo } from '@angelitolm/next-toolbar/demo'
 import { Card, Chart21, DocumentText, FlashCircle, Home2, SearchStatus, Setting2, ShieldCross, User, type Icon } from 'iconsax-reactjs'
 import { useRef, useState } from 'react'
 import { ACCOUNT_BUTTONS, SCENARIOS, blogCache, type ScenarioId, type SimulatedAction } from '@/lib/demo-scenarios'

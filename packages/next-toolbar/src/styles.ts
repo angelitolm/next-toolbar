@@ -189,6 +189,12 @@ details[open] > summary > .chevron { transform: rotate(90deg); }
 .fetch-row > div { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .fetch-row code { display: block; word-break: break-all; line-height: 1.4; }
 .fetch-row .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0 0; }
+.fetch-headers { margin: 6px 0 0; }
+.fetch-headers summary { cursor: pointer; font-size: 11px; }
+.fetch-headers dl { margin: 4px 0 0; font: 11px var(--nt-mono); }
+.fetch-headers dl > div { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 10px; padding: 2px 0; border-top: 1px solid var(--nt-border); }
+.fetch-headers dt { color: var(--nt-dim); overflow-wrap: anywhere; }
+.fetch-headers dd { margin: 0; overflow-wrap: anywhere; }
 .tag-btn, .tag { height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--nt-border); color: var(--nt-accent); font: 600 11px var(--nt-mono); display: inline-flex; align-items: center; }
 .tag { border-style: dashed; }
 .tag-btn::before, .tag::before { content: '#'; opacity: .6; }
