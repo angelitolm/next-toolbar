@@ -16,7 +16,8 @@ export default defineConfig([
     // The demo is its own entry: from the root it would statically import the toolbar, and the root's
     // lazy import of it would land in every production bundle.
     entry: ['src/index.ts', 'src/Demo.tsx'],
-    clean: true,
+    // No `clean` here: the configs build in parallel, and cleaning in one deleted the other's
+    // server.d.ts (0.6.0 shipped without it). The build script empties dist first instead.
     // Directive must survive bundling so the App Router treats this as a client component.
     banner: { js: "'use client';" },
   },

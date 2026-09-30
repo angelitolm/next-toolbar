@@ -60,7 +60,8 @@
     "logo.svg"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
+    "postbuild": "node check-exports.mjs",
     "dev": "pnpm build --watch",
     "test": "node --test src/core.test.ts",
     "typecheck": "tsc --noEmit"
