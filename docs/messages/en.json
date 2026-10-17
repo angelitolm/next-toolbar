@@ -154,7 +154,7 @@
       "outdated": {
         "title": "Outdated Next.js",
         "description": "The app runs Next.js 16.2.6, affected by several published advisories.",
-        "expect": "Red shield · upgrade to 16.3.6"
+        "expect": "Red shield · upgrade to 16.4.1"
       }
     }
   }

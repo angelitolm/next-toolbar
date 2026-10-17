@@ -115,9 +115,12 @@ const clientError: ClientError = {
     at updateFunctionComponent (react-dom-client.development.js:8431:19)`,
 }
 
-// Real advisories affecting Next.js 16.2.6 (September 2026), trimmed to the fields the toolbar shows.
+// Real advisories affecting Next.js 16.2.6 (October 2026), trimmed to the fields the toolbar shows.
 const gh = (id: string) => `https://github.com/vercel/next.js/security/advisories/${id}`
 const ADVISORIES_16_2_6: Advisory[] = [
+  { id: 'GHSA-673q-mjm6-r5xr', severity: 'critical', summary: 'Unauthenticated Remote Code Execution in `use cache` functions returning typed arrays', url: gh('GHSA-673q-mjm6-r5xr'), published: '2026-10-14', patched: '16.4.1', reviewed: false },
+  { id: 'GHSA-2464-fhr4-w9xw', cve: 'CVE-2026-96889', severity: 'critical', summary: 'Unauthenticated Remote Code Execution in the Image Optimization API when using SVG', url: gh('GHSA-2464-fhr4-w9xw'), published: '2026-10-14', patched: '16.4.1', reviewed: false },
+  { id: 'GHSA-p3m5-59mp-jv5r', severity: 'high', summary: 'Denial of Service in App Router using Server Actions', url: gh('GHSA-p3m5-59mp-jv5r'), published: '2026-10-14', patched: '16.4.1', reviewed: false },
   { id: 'GHSA-vcvr-r3jv-pc5j', cve: 'CVE-2026-94545', severity: 'critical', summary: 'Remote Code Execution in next/og ImageResponse', url: gh('GHSA-vcvr-r3jv-pc5j'), published: '2026-09-22', patched: '16.3.6', reviewed: false },
   { id: 'GHSA-2xp9-vwfh-vxw4', severity: 'critical', summary: 'Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used', url: gh('GHSA-2xp9-vwfh-vxw4'), published: '2026-09-08', patched: '16.3.3', reviewed: true },
   { id: 'GHSA-p293-qw3h-jr36', cve: 'CVE-2026-75604', severity: 'critical', summary: 'Unauthenticated Remote Code Execution on windows-hosted servers', url: gh('GHSA-p293-qw3h-jr36'), published: '2026-09-08', patched: '16.3.3', reviewed: true },

@@ -154,7 +154,7 @@
       "outdated": {
         "title": "Next.js desactualizado",
         "description": "La app usa Next.js 16.2.6, afectada por varios avisos publicados.",
-        "expect": "Escudo rojo · actualizar a 16.3.6"
+        "expect": "Escudo rojo · actualizar a 16.4.1"
       }
     }
   }

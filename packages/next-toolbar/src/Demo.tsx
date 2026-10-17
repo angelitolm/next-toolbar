@@ -51,7 +51,7 @@ export function NextToolbarDemo({
   isStatic,
   insights = NONE,
   clientErrors = NONE,
-  nextVersion = '16.3.6',
+  nextVersion = '16.4.1',
   theme = 'system',
   advisories,
   seo,
