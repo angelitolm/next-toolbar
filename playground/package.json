@@ -8,8 +8,8 @@
     "smoke": "node smoke.ts"
   },
   "dependencies": {
-    "next": "16.3.6",
     "@angelitolm/next-toolbar": "workspace:*",
+    "next": "16.4.1",
     "react": "^19",
     "react-dom": "^19"
   },
